@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastOSC", "FastOSC\FastOSC.csproj", "{A2DC19B2-2585-4AC3-8318-0414A2678604}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastOSC.Benchmarks", "FastOSC.Benchmarks\FastOSC.Benchmarks.csproj", "{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A2DC19B2-2585-4AC3-8318-0414A2678604}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2DC19B2-2585-4AC3-8318-0414A2678604}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2DC19B2-2585-4AC3-8318-0414A2678604}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2DC19B2-2585-4AC3-8318-0414A2678604}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
