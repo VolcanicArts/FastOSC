@@ -9,11 +9,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.13.12"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\FastOSC\FastOSC.csproj" />
+        <ProjectReference Include="..\FastOSC\FastOSC.csproj"/>
     </ItemGroup>
 
 </Project>
