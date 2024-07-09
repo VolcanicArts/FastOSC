@@ -13,12 +13,13 @@ public static class OSCUtils
     /// Aligns an index to an interval of 4.
     /// If the index is already aligned, <paramref name="alignEvenIfAligned"/> controls whether to add 4 anyway
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static int Align(int index, bool alignEvenIfAligned = true) => alignEvenIfAligned ? index + (4 - index % 4) : index % 4 != 0 ? index + (index % 4) : index;
 
     /// <summary>
     /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>.Length if the end of the sequence is reached
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static int FindByteIndex(byte[] data, int index, byte target = 0)
     {
         if (index >= data.Length) throw new IndexOutOfRangeException($"{nameof(index)} is out of bounds for array {nameof(data)}");
@@ -34,6 +35,7 @@ public static class OSCUtils
     /// <summary>
     /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>.Length if the end of the sequence is reached
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static int FindByteIndex(Span<byte> data, int index, byte target = 0)
     {
         if (index >= data.Length) throw new IndexOutOfRangeException($"{nameof(index)} is out of bounds for array {nameof(data)}");
@@ -46,6 +48,7 @@ public static class OSCUtils
         return index;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static ulong DateTimeToTimeTag(DateTime dateTime)
     {
         if (dateTime.Kind != DateTimeKind.Utc)
@@ -62,6 +65,7 @@ public static class OSCUtils
         return timeTag;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static DateTime TimeTagToDateTime(ulong timeTag)
     {
         var seconds = (uint)(timeTag >> 32);
