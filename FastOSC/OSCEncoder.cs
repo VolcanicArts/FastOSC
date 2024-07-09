@@ -49,7 +49,7 @@ public static class OSCEncoder
         foreach (var argument in arguments)
         {
             if (argument is object?[] internalArrayValue)
-                totalLength += internalArrayValue.Length + 2;
+                totalLength += calculateTypeTagsLength(internalArrayValue) + 2;
             else
                 totalLength += 1;
         }

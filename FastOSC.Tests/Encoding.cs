@@ -136,6 +136,20 @@ public static class Encoding
         var message = new OSCMessage(test_string, [new object?[] { 1 }]);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.ARRAY_BEGIN, OSCChars.INT, OSCChars.ARRAY_END, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0x00, 0x01 }));
+        Assert.That(encodedData,
+            Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.ARRAY_BEGIN, OSCChars.INT, OSCChars.ARRAY_END, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0x00, 0x01 }));
+    }
+
+    [Test]
+    public static void EncodingNestedArrayTest()
+    {
+        var message = new OSCMessage(test_string, [new object?[] { new object[] { new object[] { 1 } } }]);
+        var encodedData = OSCEncoder.Encode(message);
+
+        Assert.That(encodedData, Is.EqualTo(new byte[]
+        {
+            0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.ARRAY_BEGIN, OSCChars.ARRAY_BEGIN, OSCChars.ARRAY_BEGIN, OSCChars.INT, OSCChars.ARRAY_END, OSCChars.ARRAY_END,
+            OSCChars.ARRAY_END, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0x00, 0x01
+        }));
     }
 }
