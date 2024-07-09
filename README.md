@@ -8,14 +8,14 @@ FastOSC is the fastest and most memory-efficient C# OSC (Open Sound Control) lib
 - **Ease of Use**: Simple and intuitive API.
 - **Compatibility**: Supports the full [1.0 spec](https://opensoundcontrol.stanford.edu/spec-1_0.html). Extended support for ASCII, UTF-8, and Unicode.
 
-## Supported Types
+## Fully Supported Types
 - int32 (Int32)
 - int64 (Int64 / Long)
 - float32 (Single)
 - float64 (Double)
 - String (String / Symbol)
 - Blob (Byte[])
-- TimeTag (UInt64 / DateTime / TimeSpan)
+- TimeTag (UInt64 / ULong / DateTime)
 - Single characters (Char)
 - 32 bit RGBA color (OSCRGBA)
 - 4 byte MIDI message (OSCMidi)
@@ -24,6 +24,7 @@ FastOSC is the fastest and most memory-efficient C# OSC (Open Sound Control) lib
 - Nil (null)
 - Infinitum (Single.PositiveInfinity)
 - Nested arrays (Object?[])
+- Bundles (OSCBundle)
 
 ## Usage
 
@@ -39,6 +40,25 @@ sender.send(message);
 var receiver = new OSCReceiver();
 receiver.Enable(new IPEndPoint(IPAddress.Loopback, 9001));
 receiver.OnMessageReceived += message => { };
+receiver.OnBundleReceived += bundle => { };
+```
+
+If you don't want to use the built-in sender and receiver:
+```c#
+var message = new OSCMessage("/address/test", new OSCMidi(1, 1, 1, 1));
+var data = OSCEncoder.Encode(message);
+```
+
+```c#
+var data = new byte[];
+
+var packet = OSCDecoder.Decode(buffer);
+if (!packet.IsValid) return;
+
+if (packet.IsBundle)
+    // handle bundle
+else
+    // handle message
 ```
 
 ## Benchmarks
