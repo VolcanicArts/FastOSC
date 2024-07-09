@@ -14,14 +14,7 @@ public class OSCTimeTag : IEquatable<OSCTimeTag>
         Value = OSCUtils.DateTimeToTimeTag(dateTime);
     }
 
-    public OSCTimeTag(TimeSpan timeSpan)
-    {
-        Value = OSCUtils.TimeSpanToTimeTag(timeSpan);
-    }
-
     public DateTime AsDateTime() => OSCUtils.TimeTagToDateTime(Value);
-
-    public TimeSpan AsTimeSpan() => OSCUtils.TimeTagToTimeSpan(Value);
 
     public bool Equals(OSCTimeTag? other)
     {

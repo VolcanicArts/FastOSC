@@ -6,10 +6,10 @@ using BenchmarkDotNet.Running;
 
 namespace FastOSC.Benchmarks;
 
-public class Program
+public static class Program
 {
     public static void Main()
     {
-        BenchmarkRunner.Run<FastOSC>(new DebugBuildConfig());
+        BenchmarkRunner.Run<FastOSCBundle>(new DebugBuildConfig());
     }
 }

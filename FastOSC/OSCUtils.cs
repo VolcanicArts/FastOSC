@@ -52,13 +52,9 @@ public static class OSCUtils
             dateTime = dateTime.ToUniversalTime();
 
         var timeSinceOscEpoch = dateTime - osc_epoch;
-        return TimeSpanToTimeTag(timeSinceOscEpoch);
-    }
 
-    public static ulong TimeSpanToTimeTag(TimeSpan timeSpan)
-    {
-        var seconds = (uint)timeSpan.TotalSeconds;
-        var fractionalPart = timeSpan.TotalSeconds - seconds;
+        var seconds = (uint)timeSinceOscEpoch.TotalSeconds;
+        var fractionalPart = timeSinceOscEpoch.TotalSeconds - seconds;
         var fractional = (uint)(fractionalPart * (1L << 32));
 
         var timeTag = ((ulong)seconds << 32) | fractional;
@@ -76,18 +72,6 @@ public static class OSCUtils
         var dateTime = osc_epoch.AddSeconds(seconds + fractionalSeconds);
 
         return dateTime;
-    }
-
-    public static TimeSpan TimeTagToTimeSpan(ulong timeTag)
-    {
-        var seconds = (uint)(timeTag >> 32);
-        var fractional = (uint)(timeTag & 0xFFFFFFFF);
-
-        var fractionalSeconds = fractional / (double)(1L << 32);
-
-        var timeSpan = TimeSpan.FromSeconds(seconds + fractionalSeconds);
-
-        return timeSpan;
     }
 
     public static void PrintByteArray(byte[] data)
