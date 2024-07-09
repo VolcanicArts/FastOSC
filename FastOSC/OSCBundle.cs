@@ -19,6 +19,4 @@ public class OSCBundle : IOSCElement
         TimeTag = timeTag;
         Elements = elements;
     }
-
-    public byte[] Encode() => OSCEncoder.Encode(this);
 }

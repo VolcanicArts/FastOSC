@@ -16,6 +16,4 @@ public class OSCMessage : IOSCElement
         Address = address;
         Arguments = arguments;
     }
-
-    public byte[] Encode() => OSCEncoder.Encode(this);
 }

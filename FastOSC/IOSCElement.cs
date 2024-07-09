@@ -5,5 +5,4 @@ namespace FastOSC;
 
 public interface IOSCElement
 {
-    public byte[] Encode();
 }
