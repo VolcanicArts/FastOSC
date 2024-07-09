@@ -10,7 +10,7 @@ public static class Encoding
     [Test]
     public static void EncodingNullTest()
     {
-        var message = new OSCMessage(test_string, [null]);
+        var message = new OSCMessage(test_string, new object?[] { null });
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.NIL, 0x0, 0x0 }));
@@ -136,7 +136,7 @@ public static class Encoding
     [Test]
     public static void EncodingArrayTest()
     {
-        var message = new OSCMessage(test_string, [new object?[] { 1 }]);
+        var message = new OSCMessage(test_string, new object?[] { new object?[] { 1 } });
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData,
@@ -146,7 +146,7 @@ public static class Encoding
     [Test]
     public static void EncodingNestedArrayTest()
     {
-        var message = new OSCMessage(test_string, [new object?[] { new object[] { new object[] { 1 } } }]);
+        var message = new OSCMessage(test_string, new object?[] { new object?[] { new object[] { new object[] { 1 } } } });
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo(new byte[]

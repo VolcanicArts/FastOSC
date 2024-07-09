@@ -10,6 +10,6 @@ public static class Program
 {
     public static void Main()
     {
-        BenchmarkRunner.Run<FastOSCBundle>(new DebugBuildConfig());
+        BenchmarkRunner.Run<FastOSC>(new DebugBuildConfig());
     }
 }
