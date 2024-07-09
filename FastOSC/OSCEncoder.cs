@@ -19,16 +19,100 @@ public static class OSCEncoder
         OSCEncoder.encoding = encoding;
     }
 
+    #region Bundle
+
+    public static byte[] Encode(OSCBundle bundle)
+    {
+        var index = 0;
+        var data = new byte[calculateBundleLength(bundle)];
+
+        encodeBundle(bundle, data, ref index);
+
+        return data;
+    }
+
+    private static void encodeBundle(OSCBundle bundle, byte[] data, ref int index)
+    {
+        insertBundleHeader(data, ref index);
+        insertBundleTimeTag(bundle, data, ref index);
+
+        foreach (var element in bundle.Elements)
+        {
+            switch (element)
+            {
+                case OSCBundle nestedBundle:
+                    encodeInt(data, ref index, calculateBundleLength(nestedBundle));
+                    encodeBundle(nestedBundle, data, ref index);
+                    break;
+
+                case OSCMessage message:
+                    encodeInt(data, ref index, calculateMessageLength(message));
+                    encodeMessage(message, data, ref index);
+                    break;
+            }
+        }
+    }
+
+    private static int calculateBundleLength(OSCBundle bundle)
+    {
+        var totalLength = 0;
+
+        totalLength += 8; // #encode
+        totalLength += 8; // timetag
+
+        foreach (var element in bundle.Elements)
+        {
+            switch (element)
+            {
+                case OSCBundle nestedBundle:
+                    totalLength += calculateBundleLength(nestedBundle);
+                    break;
+
+                case OSCMessage message:
+                    totalLength += calculateMessageLength(message);
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            totalLength += 4; // length
+        }
+
+        return totalLength;
+    }
+
+    private static void insertBundleHeader(byte[] data, ref int index)
+    {
+        var headerText = encoding.GetBytes("#bundle");
+        headerText.CopyTo(data, index);
+        index += 8;
+    }
+
+    private static void insertBundleTimeTag(OSCBundle bundle, byte[] data, ref int index)
+    {
+        encodeTimeTag(data, ref index, bundle.TimeTag);
+    }
+
+    #endregion
+
+    #region Message
+
     public static byte[] Encode(OSCMessage message)
     {
         var index = 0;
         var data = new byte[calculateMessageLength(message)];
 
+        encodeMessage(message, data, ref index);
+
+        return data;
+    }
+
+    private static void encodeMessage(OSCMessage message, byte[] data, ref int index)
+    {
         insertAddress(message, data, ref index);
         insertTypeTags(message, data, ref index);
         insertArguments(message, data, ref index);
-
-        return data;
     }
 
     private static int calculateMessageLength(OSCMessage message)
@@ -275,4 +359,6 @@ public static class OSCEncoder
         BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(index, 8), timeTag.Value);
         index += 8;
     }
+
+    #endregion
 }

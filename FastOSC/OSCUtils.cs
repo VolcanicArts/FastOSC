@@ -89,4 +89,9 @@ public static class OSCUtils
 
         return timeSpan;
     }
+
+    public static void PrintByteArray(byte[] data)
+    {
+        Console.WriteLine(BitConverter.ToString(data).Replace("-", " "));
+    }
 }

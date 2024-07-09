@@ -19,10 +19,49 @@ public static class OSCDecoder
         OSCDecoder.encoding = encoding;
     }
 
-    public static OSCMessage? Decode(byte[] data)
+    public static OSCPacket Decode(byte[] data)
     {
         var index = 0;
+        return decode(data, ref index);
+    }
 
+    private static OSCPacket decode(byte[] data, ref int index)
+    {
+        return (char)data[index] == '#' ? new OSCPacket(decodeBundle(data, ref index)) : new OSCPacket(decodeMessage(data, ref index));
+    }
+
+    #region Bundle
+
+    private static OSCBundle decodeBundle(byte[] data, ref int index)
+    {
+        index += 8; // header
+
+        var timeTag = decodeTimeTag(data, ref index);
+
+        var elements = new List<IOSCElement>();
+
+        while (index < data.Length)
+        {
+            //_ = decodeInt(data, ref index);
+            index += 4; // element length
+            var elementPacket = decode(data, ref index);
+            if (!elementPacket.IsValid) continue;
+
+            if (elementPacket.IsBundle)
+                elements.Add(elementPacket.AsBundle());
+            else
+                elements.Add(elementPacket.AsMessage());
+        }
+
+        return new OSCBundle(timeTag, elements.ToArray());
+    }
+
+    #endregion
+
+    #region Message
+
+    private static OSCMessage? decodeMessage(byte[] data, ref int index)
+    {
         var address = decodeAddress(data, ref index);
 
         if (address is null)
@@ -227,4 +266,6 @@ public static class OSCDecoder
         index += 8;
         return new OSCTimeTag(value);
     }
+
+    #endregion
 }

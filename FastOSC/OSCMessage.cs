@@ -3,7 +3,7 @@
 
 namespace FastOSC;
 
-public class OSCMessage
+public class OSCMessage : IOSCElement
 {
     public string Address { get; }
     public object?[] Arguments { get; }
@@ -16,4 +16,6 @@ public class OSCMessage
         Address = address;
         Arguments = arguments;
     }
+
+    public byte[] Encode() => OSCEncoder.Encode(this);
 }

@@ -15,6 +15,7 @@ public class OSCReceiver
     private Task? receivingTask;
 
     public Action<OSCMessage>? OnMessageReceived;
+    public Action<OSCBundle>? OnBundleReceived;
 
     public void Enable(IPEndPoint endPoint)
     {
@@ -58,10 +59,13 @@ public class OSCReceiver
                 Array.Clear(buffer, 0, buffer.Length);
                 await socket!.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
 
-                var message = OSCDecoder.Decode(buffer);
-                if (message is null) continue;
+                var packet = OSCDecoder.Decode(buffer);
+                if (!packet.IsValid) continue;
 
-                OnMessageReceived?.Invoke(message);
+                if (packet.IsBundle)
+                    OnBundleReceived?.Invoke(packet.AsBundle());
+                else
+                    OnMessageReceived?.Invoke(packet.AsMessage());
             }
             catch (OperationCanceledException)
             {
