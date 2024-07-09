@@ -1,9 +1,9 @@
 namespace FastOSC.Tests;
 
-public class Converting
+public static class Converting
 {
     [Test]
-    public void ConvertingDateTimeToTimeTagTest()
+    public static void ConvertingDateTimeToTimeTagTest()
     {
         var dateTime = DateTime.UtcNow;
         var encodedDateTime = OSCUtils.DateTimeToTimeTag(dateTime);
@@ -13,7 +13,7 @@ public class Converting
     }
 
     [Test]
-    public void ConvertingTimeSpanToTimeTagTest()
+    public static void ConvertingTimeSpanToTimeTagTest()
     {
         var timeSpan = new TimeSpan(1, 2, 3, 4, 5);
         var encodedTimeSpan = OSCUtils.TimeSpanToTimeTag(timeSpan);

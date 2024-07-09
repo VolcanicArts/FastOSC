@@ -175,7 +175,7 @@ public static class OSCDecoder
     private static byte[] decodeByteArray(byte[] data, ref int index)
     {
         var length = decodeInt(data, ref index);
-        var byteArray = data[index..length];
+        var byteArray = data[index..(index + length)];
         index += OSCUtils.Align(length, false);
         return byteArray;
     }
@@ -196,9 +196,9 @@ public static class OSCDecoder
 
     private static char decodeChar(byte[] data, ref int index)
     {
-        var value = encoding.GetChars(data[index..4])[0];
+        var values = encoding.GetChars(data[index..(index + 4)]);
         index += 4;
-        return value;
+        return values[^1];
     }
 
     private static OSCRGBA decodeRGBA(byte[] data, ref int index)
