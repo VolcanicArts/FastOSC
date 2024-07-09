@@ -8,6 +8,17 @@ namespace FastOSC;
 
 public static class OSCDecoder
 {
+    private static Encoding encoding = Encoding.ASCII;
+
+    /// <summary>
+    /// This can be used to override the encoding.
+    /// For example, some senders may support UTF8 strings.
+    /// </summary>
+    public static void SetEncoding(Encoding encoding)
+    {
+        OSCDecoder.encoding = encoding;
+    }
+
     public static OSCMessage? Decode(byte[] data)
     {
         var index = 0;
@@ -36,9 +47,8 @@ public static class OSCDecoder
         var start = index;
         if (data[start] != OSCChars.SLASH) return null;
 
-        while (data[index] != 0) index++;
-
-        return Encoding.UTF8.GetString(data.AsSpan(start, index - start));
+        index = OSCUtils.FindByteIndex(data, index);
+        return encoding.GetString(data.AsSpan(start, index - start));
     }
 
     private static Span<byte> decodeTypeTags(byte[] data, ref int index)
@@ -46,26 +56,44 @@ public static class OSCDecoder
         var start = index;
         if (data[start] != OSCChars.COMMA) return Array.Empty<byte>();
 
-        while (data[index] != 0) index++;
-
+        index = OSCUtils.FindByteIndex(data, index);
         return data.AsSpan(start + 1, index - (start + 1));
     }
 
-    private static object[] decodeAttributes(Span<byte> typeTags, byte[] msg, ref int index)
+    private static object?[] decodeAttributes(Span<byte> typeTags, byte[] data, ref int index)
     {
-        var values = new object[typeTags.Length];
+        var values = new object?[calculateValueArrayLength(typeTags)];
+
+        var valueIndex = 0;
 
         for (var i = 0; i < typeTags.Length; i++)
         {
             var type = typeTags[i];
 
-            values[i] = type switch
+            if (type == OSCChars.ARRAY_BEGIN)
             {
-                OSCChars.INT => bytesToInt(msg, ref index),
-                OSCChars.FLOAT => bytesToFloat(msg, ref index),
-                OSCChars.STRING => bytesToString(msg, ref index),
+                var internalArrayValues = decodeInternalArray(typeTags, i, data, ref index);
+                values[valueIndex++] = internalArrayValues;
+                i += internalArrayValues.Length + 1;
+                continue;
+            }
+
+            values[valueIndex++] = type switch
+            {
+                OSCChars.STRING or OSCChars.ALT_STRING => decodeString(data, ref index),
+                OSCChars.INT => decodeInt(data, ref index),
+                OSCChars.INFINITY => float.PositiveInfinity,
+                OSCChars.FLOAT => decodeFloat(data, ref index),
                 OSCChars.TRUE => true,
                 OSCChars.FALSE => false,
+                OSCChars.BLOB => decodeByteArray(data, ref index),
+                OSCChars.LONG => decodeLong(data, ref index),
+                OSCChars.DOUBLE => decodeDouble(data, ref index),
+                OSCChars.CHAR => decodeChar(data, ref index),
+                OSCChars.NIL => null,
+                OSCChars.RGBA => decodeRGBA(data, ref index),
+                OSCChars.MIDI => decodeMidi(data, ref index),
+                OSCChars.TIMETAG => decodeTimeTag(data, ref index),
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -73,27 +101,130 @@ public static class OSCDecoder
         return values;
     }
 
-    private static int bytesToInt(byte[] data, ref int index)
+    private static int calculateValueArrayLength(Span<byte> typeTags)
+    {
+        var length = 0;
+        var i = 0;
+
+        while (i < typeTags.Length)
+        {
+            if (typeTags[i] == OSCChars.ARRAY_BEGIN)
+            {
+                length++;
+                var nestedLevel = 1;
+
+                i++;
+
+                while (i < typeTags.Length && nestedLevel > 0)
+                {
+                    switch (typeTags[i])
+                    {
+                        case OSCChars.ARRAY_BEGIN:
+                            nestedLevel++;
+                            break;
+
+                        case OSCChars.ARRAY_END:
+                            nestedLevel--;
+                            break;
+                    }
+
+                    i++;
+                }
+            }
+            else
+            {
+                length++;
+                i++;
+            }
+        }
+
+        return length;
+    }
+
+    private static object?[] decodeInternalArray(Span<byte> typeTags, int typeTagIndex, byte[] data, ref int index)
+    {
+        var arrayEndIndex = OSCUtils.FindByteIndex(typeTags, typeTagIndex, OSCChars.ARRAY_END);
+        var internalAttributes = decodeAttributes(typeTags.ToArray().AsSpan((typeTagIndex + 1)..arrayEndIndex), data, ref index);
+        return internalAttributes;
+    }
+
+    private static int decodeInt(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(index, 4));
         index += 4;
         return value;
     }
 
-    private static float bytesToFloat(byte[] data, ref int index)
+    private static float decodeFloat(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadSingleBigEndian(data.AsSpan(index, 4));
         index += 4;
         return value;
     }
 
-    private static string bytesToString(byte[] data, ref int index)
+    private static string decodeString(byte[] data, ref int index)
     {
         var start = index;
-        while (data[index] != 0) index++;
+        index = OSCUtils.FindByteIndex(data, index);
 
-        var stringData = Encoding.UTF8.GetString(data.AsSpan(start, index - start));
+        var stringData = encoding.GetString(data.AsSpan(start, index - start));
         index = OSCUtils.Align(index);
         return stringData;
+    }
+
+    private static byte[] decodeByteArray(byte[] data, ref int index)
+    {
+        var length = decodeInt(data, ref index);
+        var byteArray = data[index..length];
+        index += OSCUtils.Align(length, false);
+        return byteArray;
+    }
+
+    private static long decodeLong(byte[] data, ref int index)
+    {
+        var value = BinaryPrimitives.ReadInt64BigEndian(data.AsSpan(index, 8));
+        index += 8;
+        return value;
+    }
+
+    private static double decodeDouble(byte[] data, ref int index)
+    {
+        var value = BinaryPrimitives.ReadDoubleBigEndian(data.AsSpan(index, 8));
+        index += 8;
+        return value;
+    }
+
+    private static char decodeChar(byte[] data, ref int index)
+    {
+        var value = encoding.GetChars(data[index..4])[0];
+        index += 4;
+        return value;
+    }
+
+    private static OSCRGBA decodeRGBA(byte[] data, ref int index)
+    {
+        var r = data[index++];
+        var g = data[index++];
+        var b = data[index++];
+        var a = data[index++];
+
+        return new OSCRGBA(r, g, b, a);
+    }
+
+    private static OSCMidi decodeMidi(byte[] data, ref int index)
+    {
+        var portId = data[index++];
+        var status = data[index++];
+        var data1 = data[index++];
+        var data2 = data[index++];
+
+        return new OSCMidi(portId, status, data1, data2);
+    }
+
+    private static OSCTimeTag decodeTimeTag(byte[] data, ref int index)
+    {
+        var value = BinaryPrimitives.ReadUInt64BigEndian(data.AsSpan(index, 8));
+        index += 8;
+        return new OSCTimeTag(value);
     }
 }

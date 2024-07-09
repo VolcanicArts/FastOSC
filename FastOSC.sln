@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastOSC", "FastOSC\FastOSC.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastOSC.Benchmarks", "FastOSC.Benchmarks\FastOSC.Benchmarks.csproj", "{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastOSC.Tests", "FastOSC.Tests\FastOSC.Tests.csproj", "{D16B1B4F-F38D-4F11-A73A-34BA198D5943}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DEE65AF9-E9D6-4B38-87E6-0D381669F6DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D16B1B4F-F38D-4F11-A73A-34BA198D5943}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D16B1B4F-F38D-4F11-A73A-34BA198D5943}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D16B1B4F-F38D-4F11-A73A-34BA198D5943}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D16B1B4F-F38D-4F11-A73A-34BA198D5943}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
