@@ -3,7 +3,7 @@
 
 namespace FastOSC;
 
-public class OSCPacket
+public record OSCPacket
 {
     private readonly OSCMessage? message;
     private readonly OSCBundle? bundle;

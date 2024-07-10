@@ -3,7 +3,7 @@
 
 namespace FastOSC;
 
-public class OSCRGBA : IEquatable<OSCRGBA>
+public readonly struct OSCRGBA
 {
     public readonly byte R;
     public readonly byte G;
@@ -17,23 +17,4 @@ public class OSCRGBA : IEquatable<OSCRGBA>
         B = b;
         A = a;
     }
-
-    public bool Equals(OSCRGBA? other)
-    {
-        if (ReferenceEquals(null, other)) return false;
-        if (ReferenceEquals(this, other)) return true;
-
-        return R == other.R && G == other.G && B == other.B && A == other.A;
-    }
-
-    public override bool Equals(object? obj)
-    {
-        if (ReferenceEquals(null, obj)) return false;
-        if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != GetType()) return false;
-
-        return Equals((OSCRGBA)obj);
-    }
-
-    public override int GetHashCode() => HashCode.Combine(R, G, B, A);
 }

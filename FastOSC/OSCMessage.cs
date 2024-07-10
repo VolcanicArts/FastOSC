@@ -3,7 +3,7 @@
 
 namespace FastOSC;
 
-public class OSCMessage : IOSCElement
+public record OSCMessage : IOSCElement
 {
     public string Address { get; }
     public object?[] Arguments { get; }

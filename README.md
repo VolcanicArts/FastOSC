@@ -52,7 +52,7 @@ var data = OSCEncoder.Encode(message);
 ```c#
 var data = new byte[];
 
-var packet = OSCDecoder.Decode(buffer);
+var packet = OSCDecoder.Decode(data);
 if (!packet.IsValid) return;
 
 if (packet.IsBundle)
@@ -62,15 +62,18 @@ else
 ```
 
 ## Benchmarks
-Encoding and decoding a single OSCMidi value.
-| Method | Job        | BuildConfiguration | Mean     | Error    | StdDev   | Op/s         | Gen0   | Allocated |
-|------- |----------- |------------------- |---------:|---------:|---------:|-------------:|-------:|----------:|
-| Encode | DefaultJob | Default            | 66.38 ns | 1.347 ns | 1.551 ns | 15,064,602.9 | 0.0105 |      88 B |
-| Decode | DefaultJob | Default            | 50.86 ns | 1.023 ns | 1.681 ns | 19,662,228.0 | 0.0200 |     168 B |
+All benchmarks were ran with the address `/address/test`.
 
-Encoding and decoding 3 floats.
-| Method | Job        | BuildConfiguration | Mean     | Error    | StdDev   | Op/s         | Gen0   | Allocated |
-|------- |----------- |------------------- |---------:|---------:|---------:|-------------:|-------:|----------:|
-| Encode | DefaultJob | Default            | 72.27 ns | 1.467 ns | 1.802 ns | 13,836,737.2 | 0.0124 |     104 B |
-| Decode | DefaultJob | Default            | 57.13 ns | 1.155 ns | 2.280 ns | 17,503,529.9 | 0.0277 |     232 B |
+Encoding and decoding an OSCMidi value:
 
+| Method | Mean     | Error    | StdDev   | Op/s         | Gen0   | Allocated |
+|------- |---------:|---------:|---------:|-------------:|-------:|----------:|
+| Encode | 53.82 ns | 1.103 ns | 3.020 ns | 18,580,512.0 | 0.0105 |      88 B |
+| Decode | 42.27 ns | 0.851 ns | 1.599 ns | 23,657,956.0 | 0.0200 |     168 B |
+
+Encoding and decoding 3 floats values:
+
+| Method | Mean     | Error    | StdDev   | Op/s         | Gen0   | Allocated |
+|------- |---------:|---------:|---------:|-------------:|-------:|----------:|
+| Encode | 59.40 ns | 1.172 ns | 1.523 ns | 16,835,787.8 | 0.0124 |     104 B |
+| Decode | 51.94 ns | 1.051 ns | 1.330 ns | 19,251,212.6 | 0.0277 |     232 B |

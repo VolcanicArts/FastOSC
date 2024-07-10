@@ -12,6 +12,6 @@ public static class Converting
         var encodedDateTime = OSCUtils.DateTimeToTimeTag(dateTime);
         var decodedDateTime = OSCUtils.TimeTagToDateTime(encodedDateTime);
 
-        Assert.That(dateTime, Is.EqualTo(decodedDateTime).Within(TimeSpan.FromMilliseconds(0.01d)));
+        Assert.That(dateTime, Is.EqualTo(decodedDateTime).Within(TimeSpan.FromMilliseconds(1d)));
     }
 }

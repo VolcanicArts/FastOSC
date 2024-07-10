@@ -16,7 +16,7 @@ public class FastOSC
     [GlobalSetup]
     public void Setup()
     {
-        message = new OSCMessage("/address/test", 1.0f, 0.5f, 0.0f);
+        message = new OSCMessage("/address/test", 0.0f, 0.5f, 1.0f);
         encodedBaseline = OSCEncoder.Encode(message);
     }
 

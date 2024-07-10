@@ -3,7 +3,7 @@
 
 namespace FastOSC;
 
-public class OSCBundle : IOSCElement
+public record OSCBundle : IOSCElement
 {
     public readonly OSCTimeTag TimeTag;
     public readonly IOSCElement[] Elements;

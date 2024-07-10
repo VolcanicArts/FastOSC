@@ -48,7 +48,7 @@ public static class OSCUtils
         return index;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static ulong DateTimeToTimeTag(DateTime dateTime)
     {
         if (dateTime.Kind != DateTimeKind.Utc)
@@ -65,7 +65,7 @@ public static class OSCUtils
         return timeTag;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static DateTime TimeTagToDateTime(ulong timeTag)
     {
         var seconds = (uint)(timeTag >> 32);
