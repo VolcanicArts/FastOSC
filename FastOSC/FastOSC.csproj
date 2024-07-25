@@ -5,6 +5,18 @@
         <LangVersion>12</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PackageId>VolcanicArts.FastOSC</PackageId>
+        <Title>FastOSC</Title>
+        <Authors>VolcanicArts</Authors>
+        <Description>Fast and memory-optimised C# OSC library for .NET6+</Description>
+        <Copyright>GNU General Public License v3.0</Copyright>
+        <PackageProjectUrl>https://github.com/VolcanicArts/FastOSC</PackageProjectUrl>
+        <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/VolcanicArts/FastOSC</RepositoryUrl>
+        <PackageTags>osc</PackageTags>
+        <Company>VolcanicArts</Company>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
     </PropertyGroup>
 
 </Project>
