@@ -1,6 +1,8 @@
 # FastOSC
 
-FastOSC is a fast and memory-optimised C# OSC (Open Sound Control) library for .Net 6.
+FastOSC is a fast and memory-optimised C# OSC (Open Sound Control) library for .NET 6.
+
+![NuGet Version](https://img.shields.io/nuget/v/VolcanicArts.FastOSC)
 
 ## Features
 
