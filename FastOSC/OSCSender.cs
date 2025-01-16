@@ -16,22 +16,20 @@ public class OSCSender
         await socket.ConnectAsync(endPoint);
     }
 
-    public async Task DisconnectAsync()
+    public void Disconnect()
     {
         if (socket is null) throw new InvalidOperationException($"{nameof(OSCSender)} must be connected before it can be disconnected");
 
-        await socket.DisconnectAsync(false);
+        socket.Close();
         socket.Dispose();
         socket = null;
     }
 
     public void Send(OSCMessage message)
     {
-        if (socket is null || !socket.Connected) throw new InvalidOperationException($"{nameof(OSCSender)} needs to be enabled before sending data");
+        if (socket is null || !socket.Connected) throw new InvalidOperationException($"{nameof(OSCSender)} needs to be connected before sending data");
 
         var data = OSCEncoder.Encode(message);
-
-        if (socket?.Connected ?? false)
-            socket?.Send(data);
+        socket.Send(data);
     }
 }

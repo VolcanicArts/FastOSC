@@ -1,6 +1,7 @@
 ﻿// Copyright (c) VolcanicArts. Licensed under the GPL-3.0 License.
 // See the LICENSE file in the repository root for full license text.
 
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -9,7 +10,6 @@ namespace FastOSC;
 public class OSCReceiver
 {
     private readonly byte[] buffer = new byte[4096];
-
     private Socket? socket;
     private CancellationTokenSource? tokenSource;
     private Task? receivingTask;
@@ -17,42 +17,49 @@ public class OSCReceiver
     public Action<OSCMessage>? OnMessageReceived;
     public Action<OSCBundle>? OnBundleReceived;
 
-    public void Enable(IPEndPoint endPoint)
+    public void Connect(IPEndPoint endPoint)
     {
+        if (socket is not null || tokenSource is not null || receivingTask is not null) throw new InvalidOperationException($"Please call {nameof(DisconnectAsync)} first");
+
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         socket.Bind(endPoint);
 
-        if (!socket.IsBound)
-        {
-            throw new InvalidOperationException("Socket failed to bind");
-        }
+        if (!socket.IsBound) throw new InvalidOperationException("Socket failed to bind");
 
         tokenSource = new CancellationTokenSource();
         receivingTask = Task.Run(runReceiveLoop, tokenSource.Token);
     }
 
-    public async Task DisableAsync()
+    public async Task DisconnectAsync()
     {
-        if (tokenSource is not null)
+        if (socket is null || tokenSource is null || receivingTask is null) throw new InvalidOperationException($"Please call {nameof(Connect)} first");
+
+        await tokenSource.CancelAsync();
+
+        try
         {
-            tokenSource.Cancel();
-            tokenSource.Dispose();
-            tokenSource = null;
+            await receivingTask.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
         }
 
-        if (receivingTask is not null)
-            await receivingTask;
-
-        receivingTask?.Dispose();
-        socket?.Close();
-
+        receivingTask.Dispose();
         receivingTask = null;
+
+        tokenSource.Dispose();
+        tokenSource = null;
+
+        socket.Shutdown(SocketShutdown.Receive);
+        socket.Close();
         socket = null;
     }
 
     private async void runReceiveLoop()
     {
-        while (!tokenSource!.Token.IsCancellationRequested)
+        Debug.Assert(tokenSource is not null);
+
+        while (!tokenSource.Token.IsCancellationRequested)
         {
             try
             {

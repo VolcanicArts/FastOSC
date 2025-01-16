@@ -66,19 +66,12 @@ public static class OSCEncoder
 
         foreach (var element in bundle.Elements)
         {
-            switch (element)
+            totalLength += element switch
             {
-                case OSCBundle nestedBundle:
-                    totalLength += calculateBundleLength(nestedBundle);
-                    break;
-
-                case OSCMessage message:
-                    totalLength += calculateMessageLength(message);
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+                OSCBundle nestedBundle => calculateBundleLength(nestedBundle),
+                OSCMessage message => calculateMessageLength(message),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
             totalLength += 4; // length
         }

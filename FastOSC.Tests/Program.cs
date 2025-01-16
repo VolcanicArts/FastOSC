@@ -2,26 +2,26 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Globalization;
+using System.Net;
 
 namespace FastOSC.Tests;
 
 public class Program
 {
-    public static void Playground()
+    public static async void Playground()
     {
-        var message1 = new OSCMessage("/tst", 1);
-        var message2 = new OSCMessage("/ts2", 2);
-        var bundle2 = new OSCBundle(DateTime.Now, message1, message2);
+        var receiver = new OSCReceiver();
+        receiver.OnMessageReceived += m => Console.WriteLine($"Received: {m.Address} {m.Arguments[0]}");
+        receiver.Connect(new IPEndPoint(IPAddress.Loopback, 9001));
 
-        var bundle = new OSCBundle(DateTime.Now, message1, bundle2, message2);
-        var data = OSCEncoder.Encode(bundle);
+        var sender = new OSCSender();
+        await sender.ConnectAsync(new IPEndPoint(IPAddress.Loopback, 9000));
+        sender.Send(new OSCMessage("/test", false));
 
-        OSCUtils.PrintByteArray(data);
+        Console.ReadKey();
 
-        Console.WriteLine();
-
-        var element = OSCDecoder.Decode(data)!;
-        displayBundle(element.AsBundle());
+        await receiver.DisconnectAsync();
+        sender.Disconnect();
     }
 
     private static void displayBundle(OSCBundle bundle)
@@ -30,13 +30,15 @@ public class Program
 
         foreach (var nestedElement in bundle.Elements)
         {
-            if (nestedElement is OSCBundle elementBundle)
+            switch (nestedElement)
             {
-                displayBundle(elementBundle);
-            }
-            else if (nestedElement is OSCMessage elementMessage)
-            {
-                Console.WriteLine(elementMessage.Address + " - " + string.Join(", ", elementMessage.Arguments.Select(argument => argument?.ToString())));
+                case OSCBundle elementBundle:
+                    displayBundle(elementBundle);
+                    break;
+
+                case OSCMessage elementMessage:
+                    Console.WriteLine(elementMessage.Address + " - " + string.Join(", ", elementMessage.Arguments.Select(argument => argument?.ToString())));
+                    break;
             }
         }
     }
