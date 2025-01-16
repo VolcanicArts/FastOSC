@@ -8,15 +8,16 @@
         <PackageId>VolcanicArts.FastOSC</PackageId>
         <Title>FastOSC</Title>
         <Authors>VolcanicArts</Authors>
-        <Description>Fast and memory-optimised C# OSC library for .NET6+</Description>
+        <Description>Fast and memory-optimised C# OSC library for .NET8+</Description>
         <Copyright>GNU General Public License v3.0</Copyright>
         <PackageProjectUrl>https://github.com/VolcanicArts/FastOSC</PackageProjectUrl>
         <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/VolcanicArts/FastOSC</RepositoryUrl>
         <PackageTags>osc</PackageTags>
         <Company>VolcanicArts</Company>
-        <AssemblyVersion>1.0.0.0</AssemblyVersion>
-        <FileVersion>1.0.0.0</FileVersion>
+        <AssemblyVersion>1.1.0.0</AssemblyVersion>
+        <FileVersion>1.1.0.0</FileVersion>
+        <Version>1.1.0</Version>
     </PropertyGroup>
 
 </Project>

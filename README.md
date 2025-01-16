@@ -1,6 +1,6 @@
 # FastOSC
 
-FastOSC is a fast and memory-optimised C# OSC (Open Sound Control) library for .NET 6.
+FastOSC is a fast and memory-optimised C# OSC (Open Sound Control) library for .NET8+.
 
 [![Nuget](https://img.shields.io/nuget/v/VolcanicArts.FastOSC)](https://www.nuget.org/packages/VolcanicArts.FastOSC/)
 
@@ -40,7 +40,7 @@ sender.send(message);
 
 ```c#
 var receiver = new OSCReceiver();
-receiver.Enable(new IPEndPoint(IPAddress.Loopback, 9001));
+receiver.Connect(new IPEndPoint(IPAddress.Loopback, 9001));
 receiver.OnMessageReceived += message => { };
 receiver.OnBundleReceived += bundle => { };
 ```
