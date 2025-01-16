@@ -49,7 +49,7 @@ public class OSCReceiver
 
         try
         {
-            await receivingTask.ConfigureAwait(false);
+            await receivingTask;
         }
         catch (OperationCanceledException)
         {
@@ -74,7 +74,7 @@ public class OSCReceiver
         }
     }
 
-    private async void runReceiveLoop()
+    private async Task runReceiveLoop()
     {
         Debug.Assert(tokenSource is not null);
 
