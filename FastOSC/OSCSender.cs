@@ -12,22 +12,40 @@ public class OSCSender
 
     public async Task ConnectAsync(IPEndPoint endPoint)
     {
+        if (socket is not null) throw new InvalidOperationException($"Please call {nameof(Disconnect)} first");
+
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        await socket.ConnectAsync(endPoint);
+
+        try
+        {
+            await socket.ConnectAsync(endPoint);
+        }
+        catch (Exception)
+        {
+            socket.Dispose();
+            socket = null;
+            throw;
+        }
     }
 
     public void Disconnect()
     {
-        if (socket is null) throw new InvalidOperationException($"{nameof(OSCSender)} must be connected before it can be disconnected");
+        if (socket is null) throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
 
-        socket.Close();
-        socket.Dispose();
-        socket = null;
+        try
+        {
+            socket.Close();
+        }
+        finally
+        {
+            socket.Dispose();
+            socket = null;
+        }
     }
 
     public void Send(OSCMessage message)
     {
-        if (socket is null || !socket.Connected) throw new InvalidOperationException($"{nameof(OSCSender)} needs to be connected before sending data");
+        if (socket is null || !socket.Connected) throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
 
         var data = OSCEncoder.Encode(message);
         socket.Send(data);

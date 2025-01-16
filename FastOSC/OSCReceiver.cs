@@ -22,12 +22,23 @@ public class OSCReceiver
         if (socket is not null || tokenSource is not null || receivingTask is not null) throw new InvalidOperationException($"Please call {nameof(DisconnectAsync)} first");
 
         socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        socket.Bind(endPoint);
 
-        if (!socket.IsBound) throw new InvalidOperationException("Socket failed to bind");
+        try
+        {
+            socket.Bind(endPoint);
 
-        tokenSource = new CancellationTokenSource();
-        receivingTask = Task.Run(runReceiveLoop, tokenSource.Token);
+            if (!socket.IsBound)
+                throw new InvalidOperationException("Socket failed to bind.");
+
+            tokenSource = new CancellationTokenSource();
+            receivingTask = Task.Run(runReceiveLoop, tokenSource.Token);
+        }
+        catch
+        {
+            socket?.Dispose();
+            socket = null;
+            throw;
+        }
     }
 
     public async Task DisconnectAsync()
@@ -43,16 +54,24 @@ public class OSCReceiver
         catch (OperationCanceledException)
         {
         }
+        finally
+        {
+            receivingTask.Dispose();
+            receivingTask = null;
 
-        receivingTask.Dispose();
-        receivingTask = null;
+            tokenSource.Dispose();
+            tokenSource = null;
+        }
 
-        tokenSource.Dispose();
-        tokenSource = null;
-
-        socket.Shutdown(SocketShutdown.Receive);
-        socket.Close();
-        socket = null;
+        try
+        {
+            socket.Shutdown(SocketShutdown.Receive);
+        }
+        finally
+        {
+            socket.Close();
+            socket = null;
+        }
     }
 
     private async void runReceiveLoop()
