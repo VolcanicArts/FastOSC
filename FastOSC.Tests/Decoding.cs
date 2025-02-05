@@ -10,7 +10,7 @@ public static class Decoding
     [Test]
     public static void DecodingNullTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.NIL, 0x0, 0x0 }).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,N\0\0"u8.ToArray()).AsMessage();
 
         Assert.That(message, Is.Not.Null);
 
@@ -24,7 +24,7 @@ public static class Decoding
     [Test]
     public static void DecodingInfinityTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.INFINITY, 0x0, 0x0 }).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,I\0\0"u8.ToArray()).AsMessage();
 
         Assert.That(message, Is.Not.Null);
 
@@ -38,7 +38,7 @@ public static class Decoding
     [Test]
     public static void DecodingBoolTrueTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.TRUE, 0x0, 0x0 }).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,T\0\0"u8.ToArray()).AsMessage();
 
         Assert.That(message, Is.Not.Null);
 
@@ -52,7 +52,7 @@ public static class Decoding
     [Test]
     public static void DecodingBoolFalseTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.FALSE, 0x0, 0x0 }).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,F\0\0"u8.ToArray()).AsMessage();
 
         Assert.That(message, Is.Not.Null);
 
@@ -122,7 +122,7 @@ public static class Decoding
     [Test]
     public static void DecodingStringTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.STRING, 0x0, 0x0, 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0 }).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,s\0\0/tst\0\0\0\0"u8.ToArray()).AsMessage();
 
         Assert.That(message, Is.Not.Null);
 
@@ -150,7 +150,7 @@ public static class Decoding
     [Test]
     public static void DecodingCharTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.CHAR, 0x0, 0x0, 0x00, 0x00, 0x00, 0x61 }).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,c\0\0\0\0\0a"u8.ToArray()).AsMessage();
 
         Assert.That(message, Is.Not.Null);
 

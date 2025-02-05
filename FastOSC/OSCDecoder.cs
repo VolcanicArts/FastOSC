@@ -2,7 +2,6 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace FastOSC;
@@ -15,27 +14,24 @@ public static class OSCDecoder
     /// This can be used to override the encoding.
     /// For example, some senders may support UTF8 strings.
     /// </summary>
-    public static void SetEncoding(Encoding encoding)
+    public static void SetEncoding(Encoding newEncoding)
     {
-        OSCDecoder.encoding = encoding;
+        encoding = newEncoding;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static OSCPacket Decode(byte[] data)
     {
         var index = 0;
         return decode(data, ref index);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static OSCPacket decode(byte[] data, ref int index)
     {
-        return (char)data[index] == '#' ? new OSCPacket(decodeBundle(data, ref index)) : new OSCPacket(decodeMessage(data, ref index));
+        return data[index] == OSCChars.BUNDLE_ID ? new OSCPacket(decodeBundle(data, ref index)) : new OSCPacket(decodeMessage(data, ref index));
     }
 
     #region Bundle
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static OSCBundle decodeBundle(byte[] data, ref int index)
     {
         index += 8; // header
@@ -47,7 +43,8 @@ public static class OSCDecoder
         while (index < data.Length)
         {
             //_ = decodeInt(data, ref index);
-            index += 4; // element length
+            index += 4; // bundle length
+
             var elementPacket = decode(data, ref index);
             if (!elementPacket.IsValid) continue;
 
@@ -64,7 +61,6 @@ public static class OSCDecoder
 
     #region Message
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static OSCMessage? decodeMessage(byte[] data, ref int index)
     {
         var address = decodeAddress(data, ref index);
@@ -81,12 +77,11 @@ public static class OSCDecoder
 
         index = OSCUtils.Align(index);
 
-        var values = decodeAttributes(typeTags, data, ref index);
+        var values = decodeArguments(typeTags, data, ref index);
 
         return new OSCMessage(address, values);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static string? decodeAddress(byte[] data, ref int index)
     {
         var start = index;
@@ -96,7 +91,6 @@ public static class OSCDecoder
         return encoding.GetString(data.AsSpan(start, index - start));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static Span<byte> decodeTypeTags(byte[] data, ref int index)
     {
         var start = index;
@@ -106,10 +100,9 @@ public static class OSCDecoder
         return data.AsSpan(start + 1, index - (start + 1));
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static object?[] decodeAttributes(Span<byte> typeTags, byte[] data, ref int index)
+    private static object?[] decodeArguments(Span<byte> typeTags, byte[] data, ref int index)
     {
-        var values = new object?[calculateValueArrayLength(typeTags)];
+        var values = new object?[calculateArgumentsLength(typeTags)];
 
         var valueIndex = 0;
 
@@ -148,8 +141,7 @@ public static class OSCDecoder
         return values;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static int calculateValueArrayLength(Span<byte> typeTags)
+    private static int calculateArgumentsLength(Span<byte> typeTags)
     {
         var length = 0;
         var i = 0;
@@ -189,15 +181,13 @@ public static class OSCDecoder
         return length;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static object?[] decodeInternalArray(Span<byte> typeTags, int typeTagIndex, byte[] data, ref int index)
     {
         var arrayEndIndex = OSCUtils.FindByteIndex(typeTags, typeTagIndex, OSCChars.ARRAY_END);
-        var internalAttributes = decodeAttributes(typeTags.ToArray().AsSpan((typeTagIndex + 1)..arrayEndIndex), data, ref index);
+        var internalAttributes = decodeArguments(typeTags.ToArray().AsSpan((typeTagIndex + 1)..arrayEndIndex), data, ref index);
         return internalAttributes;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static int decodeInt(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(index, 4));
@@ -205,7 +195,6 @@ public static class OSCDecoder
         return value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static float decodeFloat(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadSingleBigEndian(data.AsSpan(index, 4));
@@ -213,7 +202,6 @@ public static class OSCDecoder
         return value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static string decodeString(byte[] data, ref int index)
     {
         var start = index;
@@ -224,7 +212,6 @@ public static class OSCDecoder
         return stringData;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static byte[] decodeByteArray(byte[] data, ref int index)
     {
         var length = decodeInt(data, ref index);
@@ -233,7 +220,6 @@ public static class OSCDecoder
         return byteArray;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static long decodeLong(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadInt64BigEndian(data.AsSpan(index, 8));
@@ -241,7 +227,6 @@ public static class OSCDecoder
         return value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static double decodeDouble(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadDoubleBigEndian(data.AsSpan(index, 8));
@@ -249,7 +234,6 @@ public static class OSCDecoder
         return value;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static char decodeChar(byte[] data, ref int index)
     {
         var values = encoding.GetChars(data[index..(index + 4)]);
@@ -257,7 +241,6 @@ public static class OSCDecoder
         return values[^1];
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static OSCRGBA decodeRGBA(byte[] data, ref int index)
     {
         var r = data[index++];
@@ -268,7 +251,6 @@ public static class OSCDecoder
         return new OSCRGBA(r, g, b, a);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static OSCMidi decodeMidi(byte[] data, ref int index)
     {
         var portId = data[index++];
@@ -279,7 +261,6 @@ public static class OSCDecoder
         return new OSCMidi(portId, status, data1, data2);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static OSCTimeTag decodeTimeTag(byte[] data, ref int index)
     {
         var value = BinaryPrimitives.ReadUInt64BigEndian(data.AsSpan(index, 8));

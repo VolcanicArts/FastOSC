@@ -2,67 +2,69 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace FastOSC;
 
 public static class OSCEncoder
 {
+    private const string bundle_header = "#bundle";
     private static Encoding encoding = Encoding.ASCII;
+
+    private static byte[] bundleHeaderBytes = encoding.GetBytes(bundle_header);
 
     /// <summary>
     /// This can be used to override the encoding.
     /// For example, some receivers may support UTF8 strings.
     /// </summary>
-    public static void SetEncoding(Encoding encoding)
+    public static void SetEncoding(Encoding newEncoding)
     {
-        OSCEncoder.encoding = encoding;
+        encoding = newEncoding;
+        bundleHeaderBytes = encoding.GetBytes(bundle_header);
     }
 
     #region Bundle
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static byte[] Encode(OSCBundle bundle)
     {
         var index = 0;
         var data = new byte[calculateBundleLength(bundle)];
 
-        encodeBundle(bundle, data, ref index);
+        encodeBundle(ref data, ref index, bundle);
 
         return data;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeBundle(OSCBundle bundle, byte[] data, ref int index)
+    private static void encodeBundle(ref byte[] data, ref int index, OSCBundle bundle)
     {
-        insertBundleHeader(data, ref index);
-        insertBundleTimeTag(bundle, data, ref index);
+        bundleHeaderBytes.CopyTo(data, index);
+        index += bundleHeaderBytes.Length;
+
+        encodeTimeTag(ref data, ref index, bundle.TimeTag);
 
         foreach (var element in bundle.Elements)
         {
             switch (element)
             {
-                case OSCBundle nestedBundle:
-                    encodeInt(data, ref index, calculateBundleLength(nestedBundle));
-                    encodeBundle(nestedBundle, data, ref index);
+                case OSCBundle subBundle:
+                    encodeInt(ref data, ref index, calculateBundleLength(subBundle));
+                    encodeBundle(ref data, ref index, subBundle);
                     break;
 
                 case OSCMessage message:
-                    encodeInt(data, ref index, calculateMessageLength(message));
-                    encodeMessage(message, data, ref index);
+                    encodeInt(ref data, ref index, calculateMessageLength(message));
+                    encodeMessage(ref data, ref index, message);
                     break;
             }
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static int calculateBundleLength(OSCBundle bundle)
+    private static unsafe int calculateBundleLength(OSCBundle bundle)
     {
         var totalLength = 0;
 
-        totalLength += 8; // #encode
-        totalLength += 8; // timetag
+        totalLength += bundleHeaderBytes.Length;
+        totalLength += sizeof(OSCTimeTag);
 
         foreach (var element in bundle.Elements)
         {
@@ -79,44 +81,27 @@ public static class OSCEncoder
         return totalLength;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertBundleHeader(byte[] data, ref int index)
-    {
-        var headerText = encoding.GetBytes("#bundle");
-        headerText.CopyTo(data, index);
-        index += 8;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertBundleTimeTag(OSCBundle bundle, byte[] data, ref int index)
-    {
-        encodeTimeTag(data, ref index, bundle.TimeTag);
-    }
-
     #endregion
 
     #region Message
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static byte[] Encode(OSCMessage message)
     {
         var index = 0;
         var data = new byte[calculateMessageLength(message)];
 
-        encodeMessage(message, data, ref index);
+        encodeMessage(ref data, ref index, message);
 
         return data;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeMessage(OSCMessage message, byte[] data, ref int index)
+    private static void encodeMessage(ref byte[] data, ref int index, OSCMessage message)
     {
-        insertAddress(message, data, ref index);
-        insertTypeTags(message, data, ref index);
-        insertArguments(message, data, ref index);
+        encodeString(ref data, ref index, message.Address);
+        insertTypeTags(ref data, ref index, message.Arguments);
+        insertArguments(ref data, ref index, message.Arguments);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static int calculateMessageLength(OSCMessage message)
     {
         var totalLength = 0;
@@ -128,7 +113,6 @@ public static class OSCEncoder
         return totalLength;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private static int calculateTypeTagsLength(object?[] arguments)
     {
         var totalLength = 1;
@@ -144,8 +128,7 @@ public static class OSCEncoder
         return totalLength;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static int calculateArgumentsLength(object?[] arguments)
+    private static unsafe int calculateArgumentsLength(object?[] arguments)
     {
         var totalLength = 0;
 
@@ -160,13 +143,13 @@ public static class OSCEncoder
                 byte[] valueByteArray => 4 + OSCUtils.Align(valueByteArray.Length, false),
                 long => 8,
                 double => 8,
-                OSCTimeTag => 8,
+                OSCTimeTag => sizeof(OSCTimeTag),
                 char => 4,
-                OSCRGBA => 4,
-                OSCMidi => 4,
+                OSCRGBA => sizeof(OSCRGBA),
+                OSCMidi => sizeof(OSCMidi),
                 null => 0,
                 bool => 0,
-                object?[] valueInternalArray => calculateArgumentsLength(valueInternalArray),
+                object?[] subArrayArguments => calculateArgumentsLength(subArrayArguments),
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -174,38 +157,30 @@ public static class OSCEncoder
         return totalLength;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertAddress(OSCMessage message, byte[] data, ref int index)
+    private static void insertTypeTags(ref byte[] data, ref int index, object?[] arguments)
     {
-        encodeString(data, ref index, message.Address);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertTypeTags(OSCMessage message, byte[] data, ref int index)
-    {
-        if (message.Arguments.Length == 0) return;
+        if (arguments.Length == 0) return;
 
         data[index++] = OSCChars.COMMA;
 
-        insertTypeTagSymbols(message.Arguments, data, ref index);
+        insertTypeTagSymbols(ref data, ref index, arguments);
 
         index = OSCUtils.Align(index);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertTypeTagSymbols(object?[] arguments, byte[] data, ref int index)
+    private static void insertTypeTagSymbols(ref byte[] data, ref int index, object?[] arguments)
     {
-        foreach (var value in arguments)
+        foreach (var argument in arguments)
         {
-            if (value is object?[] nestedArrayValue)
+            if (argument is object?[] arrayArguments)
             {
                 data[index++] = OSCChars.ARRAY_BEGIN;
-                insertTypeTagSymbols(nestedArrayValue, data, ref index);
+                insertTypeTagSymbols(ref data, ref index, arrayArguments);
                 data[index++] = OSCChars.ARRAY_END;
                 continue;
             }
 
-            data[index++] = value switch
+            data[index++] = argument switch
             {
                 string => OSCChars.STRING,
                 int => OSCChars.INT,
@@ -226,14 +201,7 @@ public static class OSCEncoder
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertArguments(OSCMessage message, byte[] data, ref int index)
-    {
-        insertValues(message.Arguments, data, ref index);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void insertValues(object?[] values, byte[] data, ref int index)
+    private static void insertArguments(ref byte[] data, ref int index, object?[] values)
     {
         foreach (var value in values)
         {
@@ -246,47 +214,47 @@ public static class OSCEncoder
                     break;
 
                 case int intValue:
-                    encodeInt(data, ref index, intValue);
+                    encodeInt(ref data, ref index, intValue);
                     break;
 
                 case float floatValue:
-                    encodeFloat(data, ref index, floatValue);
+                    encodeFloat(ref data, ref index, floatValue);
                     break;
 
                 case string stringValue:
-                    encodeString(data, ref index, stringValue);
+                    encodeString(ref data, ref index, stringValue);
                     break;
 
                 case byte[] byteArrayValue:
-                    encodeByteArray(data, ref index, byteArrayValue);
+                    encodeByteArray(ref data, ref index, byteArrayValue);
                     break;
 
                 case long longValue:
-                    encodeLong(data, ref index, longValue);
+                    encodeLong(ref data, ref index, longValue);
                     break;
 
                 case double doubleValue:
-                    encodeDouble(data, ref index, doubleValue);
+                    encodeDouble(ref data, ref index, doubleValue);
                     break;
 
                 case char charValue:
-                    encodeChar(data, ref index, charValue);
+                    encodeChar(ref data, ref index, charValue);
                     break;
 
                 case OSCRGBA rgbaValue:
-                    encodeRGBA(data, ref index, rgbaValue);
+                    encodeRGBA(ref data, ref index, rgbaValue);
                     break;
 
                 case OSCMidi midiValue:
-                    encodeMidi(data, ref index, midiValue);
+                    encodeMidi(ref data, ref index, midiValue);
                     break;
 
                 case OSCTimeTag timeTagValue:
-                    encodeTimeTag(data, ref index, timeTagValue);
+                    encodeTimeTag(ref data, ref index, timeTagValue);
                     break;
 
-                case object?[] internalArrayValues:
-                    insertValues(internalArrayValues, data, ref index);
+                case object?[] subArrayArguments:
+                    insertArguments(ref data, ref index, subArrayArguments);
                     break;
 
                 default:
@@ -295,54 +263,47 @@ public static class OSCEncoder
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeInt(byte[] data, ref int index, int value)
+    private static void encodeInt(ref byte[] data, ref int index, int value)
     {
         BinaryPrimitives.WriteInt32BigEndian(data.AsSpan(index, 4), value);
         index += 4;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeFloat(byte[] data, ref int index, float value)
+    private static void encodeFloat(ref byte[] data, ref int index, float value)
     {
         BinaryPrimitives.WriteSingleBigEndian(data.AsSpan(index, 4), value);
         index += 4;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeString(byte[] data, ref int index, string value)
+    private static void encodeString(ref byte[] data, ref int index, string value)
     {
         var bytes = encoding.GetBytes(value);
         bytes.CopyTo(data, index);
         index += OSCUtils.Align(bytes.Length);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeByteArray(byte[] data, ref int index, byte[] value)
+    private static void encodeByteArray(ref byte[] data, ref int index, byte[] value)
     {
         var length = value.Length;
-        encodeInt(data, ref index, length);
+        encodeInt(ref data, ref index, length);
         value.CopyTo(data, index);
 
         index += OSCUtils.Align(length);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeLong(byte[] data, ref int index, long value)
+    private static void encodeLong(ref byte[] data, ref int index, long value)
     {
         BinaryPrimitives.WriteInt64BigEndian(data.AsSpan(index, 8), value);
         index += 8;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeDouble(byte[] data, ref int index, double value)
+    private static void encodeDouble(ref byte[] data, ref int index, double value)
     {
         BinaryPrimitives.WriteDoubleBigEndian(data.AsSpan(index, 8), value);
         index += 8;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeChar(byte[] data, ref int index, char value)
+    private static void encodeChar(ref byte[] data, ref int index, char value)
     {
         var charBytes = encoding.GetBytes(new[] { value });
 
@@ -354,8 +315,7 @@ public static class OSCEncoder
         index += 4;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeRGBA(byte[] data, ref int index, OSCRGBA value)
+    private static void encodeRGBA(ref byte[] data, ref int index, OSCRGBA value)
     {
         data[index++] = value.R;
         data[index++] = value.G;
@@ -363,8 +323,7 @@ public static class OSCEncoder
         data[index++] = value.A;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeMidi(byte[] data, ref int index, OSCMidi midi)
+    private static void encodeMidi(ref byte[] data, ref int index, OSCMidi midi)
     {
         data[index++] = midi.PortID;
         data[index++] = midi.Status;
@@ -372,8 +331,7 @@ public static class OSCEncoder
         data[index++] = midi.Data2;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    private static void encodeTimeTag(byte[] data, ref int index, OSCTimeTag timeTag)
+    private static void encodeTimeTag(ref byte[] data, ref int index, OSCTimeTag timeTag)
     {
         BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(index, 8), timeTag.Value);
         index += 8;

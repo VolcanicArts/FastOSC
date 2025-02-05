@@ -13,7 +13,7 @@ public static class Encoding
         var message = new OSCMessage(test_string, new object?[] { null });
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.NIL, 0x0, 0x0 }));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,N\0\0"u8.ToArray()));
     }
 
     [Test]
@@ -22,7 +22,7 @@ public static class Encoding
         var message = new OSCMessage(test_string, float.PositiveInfinity);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.INFINITY, 0x0, 0x0 }));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,I\0\0"u8.ToArray()));
     }
 
     [Test]
@@ -31,7 +31,7 @@ public static class Encoding
         var message = new OSCMessage(test_string, true);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.TRUE, 0x0, 0x0 }));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,T\0\0"u8.ToArray()));
     }
 
     [Test]
@@ -40,7 +40,7 @@ public static class Encoding
         var message = new OSCMessage(test_string, false);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.FALSE, 0x0, 0x0 }));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,F\0\0"u8.ToArray()));
     }
 
     [Test]
@@ -85,7 +85,7 @@ public static class Encoding
         var message = new OSCMessage(test_string, test_string);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.STRING, 0x0, 0x0, 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0 }));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,s\0\0/tst\0\0\0\0"u8.ToArray()));
     }
 
     [Test]
@@ -103,7 +103,7 @@ public static class Encoding
         var message = new OSCMessage(test_string, 'a');
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.CHAR, 0x0, 0x0, 0x00, 0x00, 0x00, 0x61 }));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,c\0\0\0\0\0a"u8.ToArray()));
     }
 
     [Test]

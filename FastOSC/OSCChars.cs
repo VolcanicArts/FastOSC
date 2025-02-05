@@ -5,7 +5,7 @@ namespace FastOSC;
 
 /// <summary>
 /// The character values used to encode and decode OSC messages.
-/// These are ASCII encoded to comply with the spec.
+/// These are ASCII/UTF8 encoded to comply with the spec.
 /// </summary>
 public static class OSCChars
 {
@@ -28,4 +28,5 @@ public static class OSCChars
     public const byte ARRAY_END = 93; // ']'
     public const byte COMMA = 44; // ','
     public const byte SLASH = 47; // '/'
+    public const byte BUNDLE_ID = 35; // '#'
 }
