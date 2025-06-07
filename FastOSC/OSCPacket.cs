@@ -3,24 +3,31 @@
 
 namespace FastOSC;
 
-public record OSCPacket
+public interface IOSCPacket;
+
+public record OSCBundle : IOSCPacket
 {
-    private readonly OSCMessage? message;
-    private readonly OSCBundle? bundle;
+    public readonly OSCTimeTag TimeTag;
+    public readonly IOSCPacket[] Packets;
 
-    public bool IsValid => bundle is not null || message is not null;
-    public bool IsBundle => bundle is not null;
-
-    public OSCPacket(OSCBundle? bundle)
+    public OSCBundle(OSCTimeTag timeTag, params IOSCPacket[] packets)
     {
-        this.bundle = bundle;
+        TimeTag = timeTag;
+        Packets = packets;
     }
+}
 
-    public OSCPacket(OSCMessage? message)
+public record OSCMessage : IOSCPacket
+{
+    public readonly string Address;
+    public readonly object?[] Arguments;
+
+    public OSCMessage(string address, params object?[] arguments)
     {
-        this.message = message;
-    }
+        if (string.IsNullOrEmpty(address)) throw new InvalidOperationException($"{nameof(address)} must be non-null and have a non-zero length");
+        if (arguments.Length == 0) throw new InvalidOperationException($"{nameof(arguments)} must have a non-zero length");
 
-    public OSCMessage AsMessage() => message!;
-    public OSCBundle AsBundle() => bundle!;
+        Address = address;
+        Arguments = arguments;
+    }
 }

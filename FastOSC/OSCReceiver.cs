@@ -9,13 +9,17 @@ namespace FastOSC;
 
 public class OSCReceiver
 {
-    private readonly byte[] buffer = new byte[4096];
+    private readonly byte[] buffer;
     private Socket? socket;
     private CancellationTokenSource? tokenSource;
     private Task? receivingTask;
 
-    public Action<OSCMessage>? OnMessageReceived;
-    public Action<OSCBundle>? OnBundleReceived;
+    public Action<IOSCPacket>? OnPacketReceived;
+
+    public OSCReceiver(int bufferSize = 256)
+    {
+        buffer = new byte[bufferSize];
+    }
 
     public void Connect(IPEndPoint endPoint)
     {
@@ -77,26 +81,25 @@ public class OSCReceiver
     private async Task runReceiveLoop()
     {
         Debug.Assert(tokenSource is not null);
+        Debug.Assert(socket is not null);
 
-        while (!tokenSource.Token.IsCancellationRequested)
+        Array.Clear(buffer, 0, buffer.Length);
+
+        while (!tokenSource.IsCancellationRequested)
         {
             try
             {
-                Array.Clear(buffer, 0, buffer.Length);
-                await socket!.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
-
-                var packet = OSCDecoder.Decode(buffer);
-                if (!packet.IsValid) continue;
-
-                if (packet.IsBundle)
-                    OnBundleReceived?.Invoke(packet.AsBundle());
-                else
-                    OnMessageReceived?.Invoke(packet.AsMessage());
+                await socket.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
             }
             catch (OperationCanceledException)
             {
                 break;
             }
+
+            var packet = OSCDecoder.Decode(buffer);
+            Array.Clear(buffer, 0, buffer.Length);
+
+            if (packet is not null) OnPacketReceived?.Invoke(packet);
         }
     }
 }

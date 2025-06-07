@@ -3,14 +3,14 @@
 
 namespace FastOSC.Tests;
 
-public static class Decoding
+public static class Decoder
 {
     private const string test_string = "/tst";
 
     [Test]
     public static void DecodingNullTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,N\0\0"u8.ToArray()).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,N\0\0"u8.ToArray()) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -24,7 +24,7 @@ public static class Decoding
     [Test]
     public static void DecodingInfinityTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,I\0\0"u8.ToArray()).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,I\0\0"u8.ToArray()) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -38,7 +38,7 @@ public static class Decoding
     [Test]
     public static void DecodingBoolTrueTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,T\0\0"u8.ToArray()).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,T\0\0"u8.ToArray()) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -52,7 +52,7 @@ public static class Decoding
     [Test]
     public static void DecodingBoolFalseTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,F\0\0"u8.ToArray()).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,F\0\0"u8.ToArray()) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -66,7 +66,7 @@ public static class Decoding
     [Test]
     public static void DecodingIntTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.INT, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.INT, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -80,7 +80,7 @@ public static class Decoding
     [Test]
     public static void DecodingFloatTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.FLOAT, 0x0, 0x0, 0x3F, 0x80, 0x00, 0x00 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.FLOAT, 0x0, 0x0, 0x3F, 0x80, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -94,7 +94,7 @@ public static class Decoding
     [Test]
     public static void DecodingLongTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.LONG, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.LONG, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -108,7 +108,7 @@ public static class Decoding
     [Test]
     public static void DecodingDoubleTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.DOUBLE, 0x0, 0x0, 0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.DOUBLE, 0x0, 0x0, 0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -122,7 +122,7 @@ public static class Decoding
     [Test]
     public static void DecodingStringTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,s\0\0/tst\0\0\0\0"u8.ToArray()).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,s\0\0/tst\0\0\0\0"u8.ToArray()) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -136,7 +136,7 @@ public static class Decoding
     [Test]
     public static void DecodingBlobTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.BLOB, 0x0, 0x0, 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.BLOB, 0x0, 0x0, 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -150,7 +150,7 @@ public static class Decoding
     [Test]
     public static void DecodingCharTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,c\0\0\0\0\0a"u8.ToArray()).AsMessage();
+        var message = OSCDecoder.Decode("/tst\0\0\0\0,c\0\0\0\0\0a"u8.ToArray()) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -164,7 +164,7 @@ public static class Decoding
     [Test]
     public static void DecodingRGBATest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.RGBA, 0x0, 0x0, 0x01, 0x02, 0x03, 0x04 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.RGBA, 0x0, 0x0, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -178,7 +178,7 @@ public static class Decoding
     [Test]
     public static void DecodingMidiTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.MIDI, 0x0, 0x0, 0x01, 0x02, 0x03, 0x04 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.MIDI, 0x0, 0x0, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -192,7 +192,7 @@ public static class Decoding
     [Test]
     public static void DecodingTimeTagTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.TIMETAG, 0x0, 0x0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xD2 }).AsMessage();
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.TIMETAG, 0x0, 0x0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xD2 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -207,7 +207,7 @@ public static class Decoding
     public static void DecodingArrayTest()
     {
         var message = OSCDecoder.Decode(new byte[]
-            { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChars.COMMA, OSCChars.ARRAY_BEGIN, OSCChars.INT, OSCChars.ARRAY_END, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0x00, 0x01 }).AsMessage();
+            { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.ARRAY_BEGIN, OSCConst.INT, OSCConst.ARRAY_END, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0x00, 0x01 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -215,6 +215,24 @@ public static class Decoding
         {
             Assert.That(message.Address, Is.EqualTo(test_string));
             Assert.That(message.Arguments, Is.EqualTo(new object?[] { new object?[] { 1 } }));
+        });
+    }
+
+    [Test]
+    public static void DecodingBundleTest()
+    {
+        var message = OSCDecoder.Decode("#bundle\0\0\0\0\0\0\0\0\0\0\0\0\u0010/tst\0\0\0\0,i\0\0\0\0\0\u0001\0\0\0\u0010/ts2\0\0\0\0,i\0\0\0\0\0\u0002"u8) as OSCBundle;
+
+        Assert.That(message, Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(message.TimeTag, Is.EqualTo(new OSCTimeTag(OSCConst.OSC_EPOCH)));
+            Assert.That(message.Packets, Has.Length.EqualTo(2));
+            Assert.That(((OSCMessage)message.Packets[0]).Address, Is.EqualTo("/tst"));
+            Assert.That(((OSCMessage)message.Packets[0]).Arguments[0], Is.EqualTo(1));
+            Assert.That(((OSCMessage)message.Packets[1]).Address, Is.EqualTo("/ts2"));
+            Assert.That(((OSCMessage)message.Packets[1]).Arguments[0], Is.EqualTo(2));
         });
     }
 }

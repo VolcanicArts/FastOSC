@@ -4,24 +4,15 @@
 using System.Buffers.Binary;
 using System.Text;
 
+// ReSharper disable UnusedMember.Global
+// ReSharper disable ArrangeMethodOrOperatorBody
+// ReSharper disable LoopCanBeConvertedToQuery
+
 namespace FastOSC;
 
 public static class OSCEncoder
 {
-    private const string bundle_header = "#bundle";
-    private static Encoding encoding = Encoding.ASCII;
-
-    private static byte[] bundleHeaderBytes = encoding.GetBytes(bundle_header);
-
-    /// <summary>
-    /// This can be used to override the encoding.
-    /// For example, some receivers may support UTF8 strings.
-    /// </summary>
-    public static void SetEncoding(Encoding newEncoding)
-    {
-        encoding = newEncoding;
-        bundleHeaderBytes = encoding.GetBytes(bundle_header);
-    }
+    private static readonly Encoding encoding = Encoding.UTF8;
 
     #region Bundle
 
@@ -29,56 +20,49 @@ public static class OSCEncoder
     {
         var index = 0;
         var data = new byte[calculateBundleLength(bundle)];
-
-        encodeBundle(ref data, ref index, bundle);
-
+        encodeBundle(data, ref index, bundle);
         return data;
     }
 
-    private static void encodeBundle(ref byte[] data, ref int index, OSCBundle bundle)
+    private static void encodeBundle(Span<byte> data, ref int index, OSCBundle bundle)
     {
-        bundleHeaderBytes.CopyTo(data, index);
-        index += bundleHeaderBytes.Length;
+        "#bundle\0"u8.CopyTo(data.Slice(index, 8));
+        index += 8;
 
-        encodeTimeTag(ref data, ref index, bundle.TimeTag);
+        encodeTimeTag(data, ref index, bundle.TimeTag);
 
-        foreach (var element in bundle.Elements)
+        foreach (var element in bundle.Packets)
         {
             switch (element)
             {
                 case OSCBundle subBundle:
-                    encodeInt(ref data, ref index, calculateBundleLength(subBundle));
-                    encodeBundle(ref data, ref index, subBundle);
+                    encodeInt(data, ref index, calculateBundleLength(subBundle));
+                    encodeBundle(data, ref index, subBundle);
                     break;
 
                 case OSCMessage message:
-                    encodeInt(ref data, ref index, calculateMessageLength(message));
-                    encodeMessage(ref data, ref index, message);
+                    encodeInt(data, ref index, calculateMessageLength(message));
+                    encodeMessage(data, ref index, message);
                     break;
             }
         }
     }
 
-    private static unsafe int calculateBundleLength(OSCBundle bundle)
+    private static int calculateBundleLength(OSCBundle bundle)
     {
-        var totalLength = 0;
+        var length = 16; // header + timetag length
 
-        totalLength += bundleHeaderBytes.Length;
-        totalLength += sizeof(OSCTimeTag);
-
-        foreach (var element in bundle.Elements)
+        foreach (var packet in bundle.Packets)
         {
-            totalLength += element switch
+            length += packet switch
             {
-                OSCBundle nestedBundle => calculateBundleLength(nestedBundle),
-                OSCMessage message => calculateMessageLength(message),
+                OSCBundle nestedBundle => calculateBundleLength(nestedBundle) + 4, // bundle element length
+                OSCMessage message => calculateMessageLength(message) + 4, // bundle element length
                 _ => throw new ArgumentOutOfRangeException()
             };
-
-            totalLength += 4; // length
         }
 
-        return totalLength;
+        return length;
     }
 
     #endregion
@@ -89,119 +73,109 @@ public static class OSCEncoder
     {
         var index = 0;
         var data = new byte[calculateMessageLength(message)];
-
-        encodeMessage(ref data, ref index, message);
-
+        encodeMessage(data, ref index, message);
         return data;
-    }
-
-    private static void encodeMessage(ref byte[] data, ref int index, OSCMessage message)
-    {
-        encodeString(ref data, ref index, message.Address);
-        insertTypeTags(ref data, ref index, message.Arguments);
-        insertArguments(ref data, ref index, message.Arguments);
     }
 
     private static int calculateMessageLength(OSCMessage message)
     {
-        var totalLength = 0;
+        return OSCUtils.Align(encoding.GetByteCount(message.Address))
+               + OSCUtils.Align(calculateTypeTagsLength(message.Arguments))
+               + calculateArgumentsLength(message.Arguments);
+    }
 
-        totalLength += OSCUtils.Align(encoding.GetByteCount(message.Address));
-        totalLength += OSCUtils.Align(calculateTypeTagsLength(message.Arguments));
-        totalLength += calculateArgumentsLength(message.Arguments);
-
-        return totalLength;
+    private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message)
+    {
+        encodeString(data, ref index, message.Address);
+        insertTypeTags(data, ref index, message.Arguments);
+        insertArguments(data, ref index, message.Arguments);
     }
 
     private static int calculateTypeTagsLength(object?[] arguments)
     {
-        var totalLength = 1;
+        var length = 1; // comma
 
         foreach (var argument in arguments)
         {
             if (argument is object?[] internalArrayValue)
-                totalLength += calculateTypeTagsLength(internalArrayValue) + 2;
+                length += calculateTypeTagsLength(internalArrayValue) + 2; // '[' + ']' length
             else
-                totalLength += 1;
+                length += 1;
         }
 
-        return totalLength;
+        return length;
     }
 
-    private static unsafe int calculateArgumentsLength(object?[] arguments)
+    private static int calculateArgumentsLength(object?[] arguments)
     {
-        var totalLength = 0;
+        var length = 0;
 
         foreach (var value in arguments)
         {
-            totalLength += value switch
+            length += value switch
             {
                 string valueStr => OSCUtils.Align(encoding.GetByteCount(valueStr)),
                 int => 4,
                 float.PositiveInfinity => 0,
                 float => 4,
-                byte[] valueByteArray => 4 + OSCUtils.Align(valueByteArray.Length, false),
+                byte[] valueByteArray => OSCUtils.Align(valueByteArray.Length, false) + 4,
                 long => 8,
                 double => 8,
-                OSCTimeTag => sizeof(OSCTimeTag),
+                OSCTimeTag => 8,
                 char => 4,
-                OSCRGBA => sizeof(OSCRGBA),
-                OSCMidi => sizeof(OSCMidi),
+                OSCRGBA => 4,
+                OSCMidi => 4,
                 null => 0,
                 bool => 0,
                 object?[] subArrayArguments => calculateArgumentsLength(subArrayArguments),
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new ArgumentOutOfRangeException($"{value.GetType()} is an unsupported type")
             };
         }
 
-        return totalLength;
+        return length;
     }
 
-    private static void insertTypeTags(ref byte[] data, ref int index, object?[] arguments)
+    private static void insertTypeTags(Span<byte> data, ref int index, object?[] arguments)
     {
-        if (arguments.Length == 0) return;
-
-        data[index++] = OSCChars.COMMA;
-
-        insertTypeTagSymbols(ref data, ref index, arguments);
-
+        data[index++] = OSCConst.COMMA;
+        insertTypeTagSymbols(data, ref index, arguments);
         index = OSCUtils.Align(index);
     }
 
-    private static void insertTypeTagSymbols(ref byte[] data, ref int index, object?[] arguments)
+    private static void insertTypeTagSymbols(Span<byte> data, ref int index, object?[] arguments)
     {
         foreach (var argument in arguments)
         {
             if (argument is object?[] arrayArguments)
             {
-                data[index++] = OSCChars.ARRAY_BEGIN;
-                insertTypeTagSymbols(ref data, ref index, arrayArguments);
-                data[index++] = OSCChars.ARRAY_END;
+                data[index++] = OSCConst.ARRAY_BEGIN;
+                insertTypeTagSymbols(data, ref index, arrayArguments);
+                data[index++] = OSCConst.ARRAY_END;
                 continue;
             }
 
             data[index++] = argument switch
             {
-                string => OSCChars.STRING,
-                int => OSCChars.INT,
-                float.PositiveInfinity => OSCChars.INFINITY,
-                float => OSCChars.FLOAT,
-                true => OSCChars.TRUE,
-                false => OSCChars.FALSE,
-                byte[] => OSCChars.BLOB,
-                long => OSCChars.LONG,
-                double => OSCChars.DOUBLE,
-                char => OSCChars.CHAR,
-                null => OSCChars.NIL,
-                OSCRGBA => OSCChars.RGBA,
-                OSCMidi => OSCChars.MIDI,
-                OSCTimeTag => OSCChars.TIMETAG,
-                _ => throw new ArgumentOutOfRangeException()
+                string => OSCConst.STRING,
+                int => OSCConst.INT,
+                float.PositiveInfinity => OSCConst.INFINITY,
+                float => OSCConst.FLOAT,
+                true => OSCConst.TRUE,
+                false => OSCConst.FALSE,
+                byte[] => OSCConst.BLOB,
+                long => OSCConst.LONG,
+                double => OSCConst.DOUBLE,
+                char => OSCConst.CHAR,
+                null => OSCConst.NIL,
+                OSCRGBA => OSCConst.RGBA,
+                OSCMidi => OSCConst.MIDI,
+                OSCTimeTag => OSCConst.TIMETAG,
+                _ => throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type")
             };
         }
     }
 
-    private static void insertArguments(ref byte[] data, ref int index, object?[] values)
+    private static void insertArguments(Span<byte> data, ref int index, object?[] values)
     {
         foreach (var value in values)
         {
@@ -214,47 +188,47 @@ public static class OSCEncoder
                     break;
 
                 case int intValue:
-                    encodeInt(ref data, ref index, intValue);
+                    encodeInt(data, ref index, intValue);
                     break;
 
                 case float floatValue:
-                    encodeFloat(ref data, ref index, floatValue);
+                    encodeFloat(data, ref index, floatValue);
                     break;
 
                 case string stringValue:
-                    encodeString(ref data, ref index, stringValue);
+                    encodeString(data, ref index, stringValue);
                     break;
 
                 case byte[] byteArrayValue:
-                    encodeByteArray(ref data, ref index, byteArrayValue);
+                    encodeByteArray(data, ref index, byteArrayValue);
                     break;
 
                 case long longValue:
-                    encodeLong(ref data, ref index, longValue);
+                    encodeLong(data, ref index, longValue);
                     break;
 
                 case double doubleValue:
-                    encodeDouble(ref data, ref index, doubleValue);
+                    encodeDouble(data, ref index, doubleValue);
                     break;
 
                 case char charValue:
-                    encodeChar(ref data, ref index, charValue);
+                    encodeChar(data, ref index, charValue);
                     break;
 
                 case OSCRGBA rgbaValue:
-                    encodeRGBA(ref data, ref index, rgbaValue);
+                    encodeRGBA(data, ref index, rgbaValue);
                     break;
 
                 case OSCMidi midiValue:
-                    encodeMidi(ref data, ref index, midiValue);
+                    encodeMidi(data, ref index, midiValue);
                     break;
 
                 case OSCTimeTag timeTagValue:
-                    encodeTimeTag(ref data, ref index, timeTagValue);
+                    encodeTimeTag(data, ref index, timeTagValue);
                     break;
 
                 case object?[] subArrayArguments:
-                    insertArguments(ref data, ref index, subArrayArguments);
+                    insertArguments(data, ref index, subArrayArguments);
                     break;
 
                 default:
@@ -263,49 +237,50 @@ public static class OSCEncoder
         }
     }
 
-    private static void encodeInt(ref byte[] data, ref int index, int value)
+    private static void encodeInt(Span<byte> data, ref int index, int value)
     {
-        BinaryPrimitives.WriteInt32BigEndian(data.AsSpan(index, 4), value);
+        BinaryPrimitives.WriteInt32BigEndian(data.Slice(index, 4), value);
         index += 4;
     }
 
-    private static void encodeFloat(ref byte[] data, ref int index, float value)
+    private static void encodeFloat(Span<byte> data, ref int index, float value)
     {
-        BinaryPrimitives.WriteSingleBigEndian(data.AsSpan(index, 4), value);
+        BinaryPrimitives.WriteSingleBigEndian(data.Slice(index, 4), value);
         index += 4;
     }
 
-    private static void encodeString(ref byte[] data, ref int index, string value)
+    private static void encodeString(Span<byte> data, ref int index, string value)
     {
         var bytes = encoding.GetBytes(value);
-        bytes.CopyTo(data, index);
-        index += OSCUtils.Align(bytes.Length);
+        var bytesLength = bytes.Length;
+        bytes.CopyTo(data.Slice(index, bytesLength));
+        index += OSCUtils.Align(bytesLength);
     }
 
-    private static void encodeByteArray(ref byte[] data, ref int index, byte[] value)
+    private static void encodeByteArray(Span<byte> data, ref int index, byte[] value)
     {
         var length = value.Length;
-        encodeInt(ref data, ref index, length);
-        value.CopyTo(data, index);
+        encodeInt(data, ref index, length);
+        value.CopyTo(data.Slice(index, length));
 
         index += OSCUtils.Align(length);
     }
 
-    private static void encodeLong(ref byte[] data, ref int index, long value)
+    private static void encodeLong(Span<byte> data, ref int index, long value)
     {
-        BinaryPrimitives.WriteInt64BigEndian(data.AsSpan(index, 8), value);
+        BinaryPrimitives.WriteInt64BigEndian(data.Slice(index, 8), value);
         index += 8;
     }
 
-    private static void encodeDouble(ref byte[] data, ref int index, double value)
+    private static void encodeDouble(Span<byte> data, ref int index, double value)
     {
-        BinaryPrimitives.WriteDoubleBigEndian(data.AsSpan(index, 8), value);
+        BinaryPrimitives.WriteDoubleBigEndian(data.Slice(index, 8), value);
         index += 8;
     }
 
-    private static void encodeChar(ref byte[] data, ref int index, char value)
+    private static void encodeChar(Span<byte> data, ref int index, char value)
     {
-        var charBytes = encoding.GetBytes(new[] { value });
+        var charBytes = encoding.GetBytes([value]);
 
         for (var i = 0; i < charBytes.Length; i++)
         {
@@ -315,7 +290,7 @@ public static class OSCEncoder
         index += 4;
     }
 
-    private static void encodeRGBA(ref byte[] data, ref int index, OSCRGBA value)
+    private static void encodeRGBA(Span<byte> data, ref int index, OSCRGBA value)
     {
         data[index++] = value.R;
         data[index++] = value.G;
@@ -323,7 +298,7 @@ public static class OSCEncoder
         data[index++] = value.A;
     }
 
-    private static void encodeMidi(ref byte[] data, ref int index, OSCMidi midi)
+    private static void encodeMidi(Span<byte> data, ref int index, OSCMidi midi)
     {
         data[index++] = midi.PortID;
         data[index++] = midi.Status;
@@ -331,9 +306,9 @@ public static class OSCEncoder
         data[index++] = midi.Data2;
     }
 
-    private static void encodeTimeTag(ref byte[] data, ref int index, OSCTimeTag timeTag)
+    private static void encodeTimeTag(Span<byte> data, ref int index, OSCTimeTag timeTag)
     {
-        BinaryPrimitives.WriteUInt64BigEndian(data.AsSpan(index, 8), timeTag.Value);
+        BinaryPrimitives.WriteUInt64BigEndian(data.Slice(index, 8), (ulong)timeTag);
         index += 8;
     }
 

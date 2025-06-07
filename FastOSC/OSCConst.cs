@@ -3,12 +3,10 @@
 
 namespace FastOSC;
 
-/// <summary>
-/// The character values used to encode and decode OSC messages.
-/// These are ASCII/UTF8 encoded to comply with the spec.
-/// </summary>
-public static class OSCChars
+public static class OSCConst
 {
+    public static readonly DateTime OSC_EPOCH = new(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     public const byte INT = 105; // 'i'
     public const byte FLOAT = 102; // 'f'
     public const byte STRING = 115; // 's'
@@ -28,5 +26,4 @@ public static class OSCChars
     public const byte ARRAY_END = 93; // ']'
     public const byte COMMA = 44; // ','
     public const byte SLASH = 47; // '/'
-    public const byte BUNDLE_ID = 35; // '#'
 }

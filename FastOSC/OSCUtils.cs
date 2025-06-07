@@ -5,8 +5,6 @@ namespace FastOSC;
 
 public static class OSCUtils
 {
-    private static readonly DateTime osc_epoch = new(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
     /// <summary>
     /// Aligns an index to an interval of 4.
     /// If the index is already aligned, <paramref name="alignEvenIfAligned"/> controls whether to add 4 anyway
@@ -14,65 +12,14 @@ public static class OSCUtils
     public static int Align(int index, bool alignEvenIfAligned = true) => alignEvenIfAligned ? index + (4 - index % 4) : index % 4 != 0 ? index + (index % 4) : index;
 
     /// <summary>
-    /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>.Length if the end of the sequence is reached
+    /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>'s length if the end of the sequence is reached
     /// </summary>
-    public static int FindByteIndex(byte[] data, int index, byte target = 0)
+    public static int FindByteIndex(ReadOnlySpan<byte> data, int index, byte target = 0)
     {
-        if (index >= data.Length) throw new IndexOutOfRangeException($"{nameof(index)} is out of bounds for array {nameof(data)}");
+        var length = data.Length;
+        if (index >= length) throw new IndexOutOfRangeException($"{nameof(index)} is out of bounds for array {nameof(data)}");
 
-        while (data[index] != target && index < data.Length)
-        {
-            index++;
-        }
-
-        return index;
-    }
-
-    /// <summary>
-    /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>.Length if the end of the sequence is reached
-    /// </summary>
-    public static int FindByteIndex(Span<byte> data, int index, byte target = 0)
-    {
-        if (index >= data.Length) throw new IndexOutOfRangeException($"{nameof(index)} is out of bounds for array {nameof(data)}");
-
-        while (data[index] != target && index < data.Length)
-        {
-            index++;
-        }
-
-        return index;
-    }
-
-    public static ulong DateTimeToTimeTag(DateTime dateTime)
-    {
-        if (dateTime.Kind != DateTimeKind.Utc)
-            dateTime = dateTime.ToUniversalTime();
-
-        var timeSinceOscEpoch = dateTime - osc_epoch;
-
-        var seconds = (uint)timeSinceOscEpoch.TotalSeconds;
-        var fractionalPart = timeSinceOscEpoch.TotalSeconds - seconds;
-        var fractional = (uint)(fractionalPart * (1L << 32));
-
-        var timeTag = ((ulong)seconds << 32) | fractional;
-
-        return timeTag;
-    }
-
-    public static DateTime TimeTagToDateTime(ulong timeTag)
-    {
-        var seconds = (uint)(timeTag >> 32);
-        var fractional = (uint)(timeTag & 0xFFFFFFFF);
-
-        var fractionalSeconds = fractional / (double)(1L << 32);
-
-        var dateTime = osc_epoch.AddSeconds(seconds + fractionalSeconds);
-
-        return dateTime;
-    }
-
-    public static void PrintByteArray(byte[] data)
-    {
-        Console.WriteLine(BitConverter.ToString(data).Replace("-", " "));
+        var found = data[index..].IndexOf(target);
+        return found == -1 ? length : index + found;
     }
 }

@@ -9,8 +9,8 @@ public static class Converting
     public static void ConvertingDateTimeToTimeTagTest()
     {
         var dateTime = DateTime.UtcNow;
-        var encodedDateTime = OSCUtils.DateTimeToTimeTag(dateTime);
-        var decodedDateTime = OSCUtils.TimeTagToDateTime(encodedDateTime);
+        var encodedDateTime = new OSCTimeTag(dateTime);
+        var decodedDateTime = (DateTime)encodedDateTime;
 
         Assert.That(dateTime, Is.EqualTo(decodedDateTime).Within(TimeSpan.FromMilliseconds(1d)));
     }
