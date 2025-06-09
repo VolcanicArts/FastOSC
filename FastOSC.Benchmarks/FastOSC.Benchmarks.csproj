@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="BenchmarkDotNet" Version="0.15.0"/>
+        <PackageReference Include="Rug.Osc" Version="1.2.5" />
     </ItemGroup>
 
     <ItemGroup>

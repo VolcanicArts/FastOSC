@@ -47,10 +47,16 @@ else if (packet is OSCBundle bundle)
 ```
 
 ## Benchmarks
-The benchmarks were ran with the address set to `/avatar/parameters/VRCOSC/Media/Position` and a single float argument, as it represents a real-world use of this library.
+Encode/Decode benchmarks were ran with the address set to `/avatar/parameters/VRCOSC/Media/Position` and a single float argument, as it represents a real-world use of this library.
 Benchmarks were ran on an i7-11700k, Windows 10.
 
-|     Method      |     Mean      |   Error    |   StdDev   |       Op/s        |  Gen0   | Allocated |
-|:---------------:|:-------------:|:----------:|:----------:|:-----------------:|:-------:|:---------:|
-|  EncodeMessage  | **52.54 ns**  |  0.237 ns  |  0.198 ns  | **19,033,146.6**  | 0.0172  | **144 B** |
-|  DecodeMessage  | **38.02 ns**  |  0.561 ns  |  0.525 ns  | **26,302,964.5**  | 0.0229  | **192 B** |
+| Operation            | Library             | Mean (ns)  | StdDev (ns) | Ops/sec      | Allocated (B) | Gen0   | Gen1   |
+|----------------------|---------------------|------------|-------------|--------------|---------------| ------ | ------ |
+| **Message Encode**   | FastOSC             | **35.75**  | 0.375       | **~27.97 M** | **80**        | 0.0095 | -      |
+|                      | FastOSC (ArrayPool) | **24.14**  | 0.146       | **~41.43 M** | **0**         | -      | -      |
+|                      | RugOsc              | 83.11      | 2.129       | ~12.03 M     | 168           | 0.0200 | -      |
+| **Message Decode**   | FastOSC             | **39.00**  | 0.722       | **~25.64 M** | **192**       | 0.0229 | -      |
+|                      | RugOsc              | 134.77     | 1.260       | ~7.42 M      | 480           | 0.0572 | -      |
+| **Pattern Matching** | FastOSC             | 1,297.00   | 28.000      | ~0.77 M      | 3,270         | 0.3986 | 0.0019 |
+|                      | FastOSC (Caching)   | **107.54** | 0.452       | **~9.30 M**  | **32**        | 0.0038 | -      |
+|                      | RugOsc              | 3,274.29   | 86.136      | ~0.31 M      | 10,528        | 1.2550 | 0.0381 |

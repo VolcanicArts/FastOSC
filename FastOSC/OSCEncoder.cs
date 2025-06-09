@@ -2,6 +2,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Text;
 
 // ReSharper disable UnusedMember.Global
@@ -13,6 +14,16 @@ namespace FastOSC;
 public static class OSCEncoder
 {
     private static readonly Encoding encoding = Encoding.UTF8;
+    private static readonly ConcurrentDictionary<string, byte[]> str_cache = new();
+
+    private static ReadOnlySpan<byte> stringToBytes(string str)
+    {
+        if (str_cache.TryGetValue(str, out var foundBytes)) return foundBytes;
+
+        var bytes = encoding.GetBytes(str);
+        str_cache.TryAdd(str, bytes);
+        return bytes;
+    }
 
     #region Bundle
 
@@ -41,8 +52,9 @@ public static class OSCEncoder
                     break;
 
                 case OSCMessage message:
-                    encodeInt(data, ref index, calculateMessageLength(message));
-                    encodeMessage(data, ref index, message);
+                    var addressBytes = stringToBytes(message.Address);
+                    encodeInt(data, ref index, calculateMessageLength(message, addressBytes));
+                    encodeMessage(data, ref index, message, addressBytes);
                     break;
             }
         }
@@ -57,7 +69,7 @@ public static class OSCEncoder
             length += packet switch
             {
                 OSCBundle nestedBundle => calculateBundleLength(nestedBundle) + 4, // bundle element length
-                OSCMessage message => calculateMessageLength(message) + 4, // bundle element length
+                OSCMessage message => calculateMessageLength(message, stringToBytes(message.Address)) + 4, // bundle element length
                 _ => throw new ArgumentOutOfRangeException()
             };
         }
@@ -69,24 +81,50 @@ public static class OSCEncoder
 
     #region Message
 
+    /// <summary>
+    /// Encodes an <see cref="OSCMessage"/> into a given destination array.
+    /// </summary>
+    /// <param name="message">The message to encode</param>
+    /// <param name="dest">The destination array</param>
+    /// <remarks>
+    /// This is useful if you want to use your own array pool to have the encoding allocate no memory on the heap.
+    /// Ensure that <paramref name="dest"/> is large enough to handle your largest message
+    /// </remarks>
+    public static void Encode(OSCMessage message, Span<byte> dest)
+    {
+        var index = 0;
+        encodeMessage(dest, ref index, message, stringToBytes(message.Address));
+    }
+
+    /// <summary>
+    /// Encodes an <see cref="OSCMessage"/> into a created array. The size of the created array fits the encoded message
+    /// </summary>
+    /// <param name="message">The message to encode</param>
+    /// <returns>A heap-allocated byte array encoded with the contents of <paramref name="message"/></returns>
+    /// <remarks>Caching is used where possible to reduce allocations, so the total allocations for this method of encoding is however large the returned array is</remarks>
     public static byte[] Encode(OSCMessage message)
     {
         var index = 0;
-        var data = new byte[calculateMessageLength(message)];
-        encodeMessage(data, ref index, message);
+        var addressBytes = stringToBytes(message.Address);
+
+        var data = new byte[calculateMessageLength(message, addressBytes)];
+        encodeMessage(data, ref index, message, addressBytes);
         return data;
     }
 
-    private static int calculateMessageLength(OSCMessage message)
+    private static int calculateMessageLength(OSCMessage message, ReadOnlySpan<byte> addressBytes)
     {
-        return OSCUtils.Align(encoding.GetByteCount(message.Address))
+        return OSCUtils.Align(addressBytes.Length)
                + OSCUtils.Align(calculateTypeTagsLength(message.Arguments))
                + calculateArgumentsLength(message.Arguments);
     }
 
-    private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message)
+    private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message, ReadOnlySpan<byte> addressBytes)
     {
-        encodeString(data, ref index, message.Address);
+        var addressLength = OSCUtils.Align(addressBytes.Length);
+        addressBytes.CopyTo(data.Slice(index, addressLength));
+        index += addressLength;
+
         insertTypeTags(data, ref index, message.Arguments);
         insertArguments(data, ref index, message.Arguments);
     }
@@ -251,10 +289,10 @@ public static class OSCEncoder
 
     private static void encodeString(Span<byte> data, ref int index, string value)
     {
-        var bytes = encoding.GetBytes(value);
-        var bytesLength = bytes.Length;
+        var bytes = stringToBytes(value);
+        var bytesLength = OSCUtils.Align(bytes.Length);
         bytes.CopyTo(data.Slice(index, bytesLength));
-        index += OSCUtils.Align(bytesLength);
+        index += bytesLength;
     }
 
     private static void encodeByteArray(Span<byte> data, ref int index, byte[] value)

@@ -80,7 +80,7 @@ public static class OSCDecoder
         index = OSCUtils.Align(index);
 
         var typeTags = decodeTypeTags(data, ref index);
-        if (typeTags.Length == 0) return null;
+        if (typeTags.IsEmpty) return null;
 
         index = OSCUtils.Align(index);
 
@@ -90,18 +90,18 @@ public static class OSCDecoder
 
     private static string? decodeAddress(ReadOnlySpan<byte> data, ref int index)
     {
-        var start = index;
-        if (data[start] != OSCConst.SLASH) return null;
+        if (data[index] != OSCConst.SLASH) return null;
 
+        var start = index;
         index = OSCUtils.FindByteIndex(data, index);
         return encoding.GetString(data.Slice(start, index - start));
     }
 
     private static ReadOnlySpan<byte> decodeTypeTags(ReadOnlySpan<byte> data, ref int index)
     {
-        var start = index;
-        if (data[start] != OSCConst.COMMA) return Array.Empty<byte>();
+        if (data[index] != OSCConst.COMMA) return ReadOnlySpan<byte>.Empty;
 
+        var start = index;
         index = OSCUtils.FindByteIndex(data, index);
         return data.Slice(start + 1, index - (start + 1));
     }
