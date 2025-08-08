@@ -77,12 +77,12 @@ public static class OSCDecoder
         var address = decodeAddress(data, ref index);
         if (address is null) return null;
 
-        index = OSCUtils.Align(index);
+        index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
 
         var typeTags = decodeTypeTags(data, ref index);
         if (typeTags.IsEmpty) return null;
 
-        index = OSCUtils.Align(index);
+        index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
 
         var values = decodeArguments(typeTags, data, ref index);
         return new OSCMessage(address, values);
@@ -212,7 +212,7 @@ public static class OSCDecoder
         index = OSCUtils.FindByteIndex(data, index);
 
         var stringData = encoding.GetString(data.Slice(start, index - start));
-        index = OSCUtils.Align(index);
+        index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
         return stringData;
     }
 
@@ -220,7 +220,7 @@ public static class OSCDecoder
     {
         var length = decodeInt(data, ref index);
         var byteArray = data.Slice(index, length).ToArray();
-        index += OSCUtils.Align(length, false);
+        index += OSCUtils.Align(length + 1); // +1 for null terminator
         return byteArray;
     }
 

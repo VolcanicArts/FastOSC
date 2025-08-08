@@ -1,4 +1,4 @@
-﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
+// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
@@ -114,14 +114,14 @@ public static class OSCEncoder
 
     private static int calculateMessageLength(OSCMessage message, ReadOnlySpan<byte> addressBytes)
     {
-        return OSCUtils.Align(addressBytes.Length)
-               + OSCUtils.Align(calculateTypeTagsLength(message.Arguments))
+        return OSCUtils.Align(addressBytes.Length + 1) // +1 for null terminator
+               + OSCUtils.Align(calculateTypeTagsLength(message.Arguments) + 2) // +2 for comma + null terminator
                + calculateArgumentsLength(message.Arguments);
     }
 
     private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message, ReadOnlySpan<byte> addressBytes)
     {
-        var addressLength = OSCUtils.Align(addressBytes.Length);
+        var addressLength = OSCUtils.Align(addressBytes.Length + 1); // +1 for null terminator
         addressBytes.CopyTo(data.Slice(index, addressLength));
         index += addressLength;
 
@@ -131,7 +131,7 @@ public static class OSCEncoder
 
     private static int calculateTypeTagsLength(object?[] arguments)
     {
-        var length = 1; // comma
+        var length = 0;
 
         foreach (var argument in arguments)
         {
@@ -152,11 +152,11 @@ public static class OSCEncoder
         {
             length += value switch
             {
-                string valueStr => OSCUtils.Align(encoding.GetByteCount(valueStr)),
+                string valueStr => OSCUtils.Align(encoding.GetByteCount(valueStr) + 1), // +1 for null terminator
                 int => 4,
                 float.PositiveInfinity => 0,
                 float => 4,
-                byte[] valueByteArray => OSCUtils.Align(valueByteArray.Length, false) + 4,
+                byte[] valueByteArray => OSCUtils.Align(valueByteArray.Length) + 4, // +4 for encoded length
                 long => 8,
                 double => 8,
                 OSCTimeTag => 8,
@@ -177,7 +177,7 @@ public static class OSCEncoder
     {
         data[index++] = OSCConst.COMMA;
         insertTypeTagSymbols(data, ref index, arguments);
-        index = OSCUtils.Align(index);
+        index = OSCUtils.Align(index + 1); // +1 for null terminator
     }
 
     private static void insertTypeTagSymbols(Span<byte> data, ref int index, object?[] arguments)

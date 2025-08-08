@@ -161,4 +161,21 @@ public static class Encoder
 
         Assert.That(encodedData, Is.EqualTo("#bundle\0\0\0\0\0\0\0\0\0\0\0\0\u0010/tst\0\0\0\0,i\0\0\0\0\0\u0001\0\0\0\u0010/ts2\0\0\0\0,i\0\0\0\0\0\u0002"u8.ToArray()));
     }
+
+    [Test]
+    public static void AddressAlignBoundaries()
+    {
+        assertMessageStartsCorrectly("/a", expectedTypeTagOffset: 4);
+        assertMessageStartsCorrectly("/abcd", expectedTypeTagOffset: 8);
+        assertMessageStartsCorrectly("/abcdef", expectedTypeTagOffset: 8);
+        assertMessageStartsCorrectly("/abcdefg", expectedTypeTagOffset: 12);
+        assertMessageStartsCorrectly("/abcdefgh", expectedTypeTagOffset: 12);
+    }
+
+    private static void assertMessageStartsCorrectly(string address, int expectedTypeTagOffset)
+    {
+        var message = new OSCMessage(address, true);
+        var data = OSCEncoder.Encode(message);
+        Assert.That((char)data[expectedTypeTagOffset], Is.EqualTo(','));
+    }
 }
