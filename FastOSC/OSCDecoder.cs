@@ -1,4 +1,4 @@
-// Copyright (c) VolcanicArts. Licensed under the LGPL License.
+﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
@@ -220,7 +220,7 @@ public static class OSCDecoder
     {
         var length = decodeInt(data, ref index);
         var byteArray = data.Slice(index, length).ToArray();
-        index += OSCUtils.Align(length + 1); // +1 for null terminator
+        index += OSCUtils.Align(length);
         return byteArray;
     }
 

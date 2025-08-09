@@ -83,23 +83,20 @@ public class OSCReceiver
         Debug.Assert(tokenSource is not null);
         Debug.Assert(socket is not null);
 
-        Array.Clear(buffer, 0, buffer.Length);
-
         while (!tokenSource.IsCancellationRequested)
         {
             try
             {
-                await socket.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
+                var receivedBytes = await socket.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
+                if (receivedBytes == 0) continue;
+
+                var packet = OSCDecoder.Decode(buffer.AsSpan(0, receivedBytes));
+                if (packet is not null) OnPacketReceived?.Invoke(packet);
             }
             catch (OperationCanceledException)
             {
                 break;
             }
-
-            var packet = OSCDecoder.Decode(buffer);
-            Array.Clear(buffer, 0, buffer.Length);
-
-            if (packet is not null) OnPacketReceived?.Invoke(packet);
         }
     }
 }
