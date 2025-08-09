@@ -2,10 +2,10 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 // ReSharper disable UnusedMember.Global
-// ReSharper disable ArrangeMethodOrOperatorBody
 // ReSharper disable LoopCanBeConvertedToQuery
 
 namespace FastOSC;
@@ -20,6 +20,7 @@ public static class OSCEncoder
     {
         var index = 0;
         var data = new byte[calculateBundleLength(bundle)];
+
         encodeBundle(data, ref index, bundle);
         return data;
     }
@@ -58,7 +59,7 @@ public static class OSCEncoder
             {
                 OSCBundle nestedBundle => calculateBundleLength(nestedBundle) + 4, // bundle element length
                 OSCMessage message => calculateMessageLength(message) + 4, // bundle element length
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new ArgumentOutOfRangeException(nameof(bundle), bundle, $"Unknown {nameof(IOSCPacket)} within bundle")
             };
         }
 
@@ -103,12 +104,9 @@ public static class OSCEncoder
     /// </summary>
     public static int GetEncodedSize(OSCMessage message) => calculateMessageLength(message);
 
-    private static int calculateMessageLength(OSCMessage message)
-    {
-        return OSCUtils.Align(encoding.GetByteCount(message.Address) + 1) // +1 for null terminator
-               + OSCUtils.Align(calculateTypeTagsLength(message.Arguments) + 2) // +2 for comma + null terminator
-               + calculateArgumentsLength(message.Arguments);
-    }
+    private static int calculateMessageLength(OSCMessage message) => OSCUtils.Align(encoding.GetByteCount(message.Address) + 1) // +1 for null terminator
+                                                                     + OSCUtils.Align(calculateTypeTagsLength(message.Arguments) + 2) // +2 for comma + null terminator
+                                                                     + calculateArgumentsLength(message.Arguments);
 
     private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message)
     {
@@ -165,7 +163,7 @@ public static class OSCEncoder
     {
         data[index++] = OSCConst.COMMA;
         insertTypeTagSymbols(data, ref index, arguments);
-        index = OSCUtils.Align(index + 1); // +1 for null terminator
+        OSCUtils.AlignAndWriteNulls(data, ref index, true);
     }
 
     private static void insertTypeTagSymbols(Span<byte> data, ref int index, object?[] arguments)
@@ -263,52 +261,60 @@ public static class OSCEncoder
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeInt(Span<byte> data, ref int index, int value)
     {
         BinaryPrimitives.WriteInt32BigEndian(data.Slice(index, 4), value);
         index += 4;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeFloat(Span<byte> data, ref int index, float value)
     {
         BinaryPrimitives.WriteSingleBigEndian(data.Slice(index, 4), value);
         index += 4;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeString(Span<byte> data, ref int index, string value)
     {
-        var byteCount = encoding.GetByteCount(value);
-        encoding.GetBytes(value, data.Slice(index, byteCount));
-        index += OSCUtils.Align(byteCount + 1); // +1 for null terminator
+        var bytesWritten = encoding.GetBytes(value, data[index..]);
+        index += bytesWritten;
+        OSCUtils.AlignAndWriteNulls(data, ref index, true);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeByteArray(Span<byte> data, ref int index, byte[] value)
     {
         var length = value.Length;
         encodeInt(data, ref index, length);
-        value.CopyTo(data.Slice(index, length));
-
-        index += OSCUtils.Align(length);
+        value.AsSpan().CopyTo(data.Slice(index, length));
+        index += length;
+        OSCUtils.AlignAndWriteNulls(data, ref index, false);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeLong(Span<byte> data, ref int index, long value)
     {
         BinaryPrimitives.WriteInt64BigEndian(data.Slice(index, 8), value);
         index += 8;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeDouble(Span<byte> data, ref int index, double value)
     {
         BinaryPrimitives.WriteDoubleBigEndian(data.Slice(index, 8), value);
         index += 8;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeChar(Span<byte> data, ref int index, char value)
     {
         BinaryPrimitives.WriteUInt32BigEndian(data.Slice(index, 4), (uint)(value & 0xFF));
         index += 4;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeRGBA(Span<byte> data, ref int index, OSCRGBA value)
     {
         data[index++] = value.R;
@@ -317,6 +323,7 @@ public static class OSCEncoder
         data[index++] = value.A;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeMidi(Span<byte> data, ref int index, OSCMidi midi)
     {
         data[index++] = midi.PortID;
@@ -325,6 +332,7 @@ public static class OSCEncoder
         data[index++] = midi.Data2;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void encodeTimeTag(Span<byte> data, ref int index, OSCTimeTag timeTag)
     {
         BinaryPrimitives.WriteUInt64BigEndian(data.Slice(index, 8), (ulong)timeTag);

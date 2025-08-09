@@ -14,6 +14,17 @@ public static class OSCUtils
     public static int Align(int index) => index + 3 & ~3;
 
     /// <summary>
+    /// Aligns an index to an interval of 4 and writes nulls where needed
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void AlignAndWriteNulls(Span<byte> data, ref int index, bool includeNullTerminator)
+    {
+        if (includeNullTerminator) data[index++] = 0;
+        var end = Align(index);
+        for (; index < end; index++) data[index] = 0;
+    }
+
+    /// <summary>
     /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>'s length if the end of the sequence is reached
     /// </summary>
     public static int FindByteIndex(ReadOnlySpan<byte> data, int index, byte target = 0)
