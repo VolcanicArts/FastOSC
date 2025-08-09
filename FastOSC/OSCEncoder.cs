@@ -318,13 +318,7 @@ public static class OSCEncoder
 
     private static void encodeChar(Span<byte> data, ref int index, char value)
     {
-        var charBytes = encoding.GetBytes([value]);
-
-        for (var i = 0; i < charBytes.Length; i++)
-        {
-            data[index + 3 - i] = charBytes[charBytes.Length - 1 - i];
-        }
-
+        BinaryPrimitives.WriteUInt32BigEndian(data.Slice(index, 4), (uint)(value & 0xFF));
         index += 4;
     }
 

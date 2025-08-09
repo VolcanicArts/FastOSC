@@ -1,4 +1,4 @@
-﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
+// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
@@ -240,9 +240,9 @@ public static class OSCDecoder
 
     private static char decodeChar(ReadOnlySpan<byte> data, ref int index)
     {
-        var values = encoding.GetChars(data.Slice(index, 4).ToArray());
+        var value = BinaryPrimitives.ReadUInt32BigEndian(data.Slice(index, 4));
         index += 4;
-        return values[^1];
+        return (char)(value & 0xFF);
     }
 
     private static OSCRGBA decodeRGBA(ReadOnlySpan<byte> data, ref int index)
