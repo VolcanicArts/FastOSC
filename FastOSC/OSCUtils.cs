@@ -20,19 +20,52 @@ public static class OSCUtils
     public static void AlignAndWriteNulls(Span<byte> data, ref int index, bool includeNullTerminator)
     {
         if (includeNullTerminator) data[index++] = 0;
-        var end = Align(index);
-        for (; index < end; index++) data[index] = 0;
+        var pad = Align(index) - index;
+        if (pad >= 1) data[index++] = 0;
+        if (pad >= 2) data[index++] = 0;
+        if (pad == 3) data[index++] = 0;
     }
 
     /// <summary>
-    /// Finds a byte at or above <paramref name="index"/>, or <paramref name="data"/>'s length if the end of the sequence is reached
+    /// Finds the null byte's index at or above <paramref name="index"/>
     /// </summary>
-    public static int FindByteIndex(ReadOnlySpan<byte> data, int index, byte target = 0)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int FindNullTerminator(ReadOnlySpan<byte> data, int index)
     {
         var length = data.Length;
         if (index >= length) throw new IndexOutOfRangeException($"{nameof(index)} is out of bounds for array {nameof(data)}");
 
-        var found = data[index..].IndexOf(target);
-        return found == -1 ? length : index + found;
+        var found = data[index..].IndexOf((byte)0);
+        if (found == -1) throw new IndexOutOfRangeException("Could not find null terminator");
+
+        return index + found;
+    }
+
+    /// <summary>
+    /// Given tags[...] where tags[beginIndex] == '[', returns the matching ']' index
+    /// </summary>
+    public static int FindMatchingArrayEnd(ReadOnlySpan<byte> tags, int beginIndex)
+    {
+        if (beginIndex < 0 || beginIndex >= tags.Length || tags[beginIndex] != OSCConst.ARRAY_BEGIN)
+            throw new ArgumentOutOfRangeException(nameof(beginIndex));
+
+        var depth = 1;
+
+        for (int i = beginIndex + 1; i < tags.Length; i++)
+        {
+            var t = tags[i];
+
+            switch (t)
+            {
+                case OSCConst.ARRAY_BEGIN:
+                    depth++;
+                    break;
+
+                case OSCConst.ARRAY_END when --depth == 0:
+                    return i;
+            }
+        }
+
+        throw new FormatException("Unbalanced array brackets in type tags");
     }
 }

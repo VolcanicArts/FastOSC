@@ -1,47 +1,66 @@
 ﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
+using System.Runtime.InteropServices;
+
 namespace FastOSC;
 
-public readonly record struct OSCMidi(byte PortID, byte Status, byte Data1, byte Data2)
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct OSCMidi
 {
-    public void Deconstruct(out byte portId, out byte status, out byte data1, out byte data2)
+    public readonly byte PortID;
+    public readonly byte Status;
+    public readonly byte Data1;
+    public readonly byte Data2;
+
+    public OSCMidi(byte portID, byte status, byte data1, byte data2)
     {
-        portId = PortID;
-        status = Status;
-        data1 = Data1;
-        data2 = Data2;
+        PortID = portID;
+        Status = status;
+        Data1 = data1;
+        Data2 = data2;
     }
 }
 
-public readonly record struct OSCRGBA(byte R, byte G, byte B, byte A)
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct OSCRGBA
 {
-    public void Deconstruct(out byte r, out byte g, out byte b, out byte a)
+    public readonly byte R;
+    public readonly byte G;
+    public readonly byte B;
+    public readonly byte A;
+
+    public OSCRGBA(byte r, byte g, byte b, byte a)
     {
-        r = R;
-        g = G;
-        b = B;
-        a = A;
+        R = r;
+        G = g;
+        B = b;
+        A = a;
     }
 }
 
-public readonly record struct OSCTimeTag
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct OSCTimeTag
 {
-    private readonly ulong value;
+    public readonly ulong Value;
 
     public OSCTimeTag(ulong value)
     {
-        this.value = value;
+        Value = value;
     }
 
     public OSCTimeTag(DateTime dateTime)
     {
-        value = fromDateTime(dateTime);
+        Value = fromDateTime(dateTime);
     }
 
-    public static explicit operator ulong(OSCTimeTag timeTag) => timeTag.value;
-
-    public static explicit operator DateTime(OSCTimeTag timeTag) => toDateTime(timeTag.value);
+    public DateTime ToDateTime()
+    {
+        var seconds = (uint)(Value >> 32);
+        var fractional = (uint)(Value & 0xFFFFFFFF);
+        var fractionalSeconds = fractional / (double)(1L << 32);
+        return OSCConst.OSC_EPOCH.AddSeconds(seconds + fractionalSeconds);
+    }
 
     private static ulong fromDateTime(DateTime dateTime)
     {
@@ -55,13 +74,5 @@ public readonly record struct OSCTimeTag
         var fractional = (uint)(fractionalPart * (1L << 32));
 
         return (ulong)seconds << 32 | fractional;
-    }
-
-    private static DateTime toDateTime(ulong timeTag)
-    {
-        var seconds = (uint)(timeTag >> 32);
-        var fractional = (uint)(timeTag & 0xFFFFFFFF);
-        var fractionalSeconds = fractional / (double)(1L << 32);
-        return OSCConst.OSC_EPOCH.AddSeconds(seconds + fractionalSeconds);
     }
 }
