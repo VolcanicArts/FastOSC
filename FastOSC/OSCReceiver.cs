@@ -1,7 +1,6 @@
 ﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -14,7 +13,7 @@ public class OSCReceiver
     private CancellationTokenSource? tokenSource;
     private Task? receivingTask;
 
-    public Action<IOSCPacket>? OnPacketReceived;
+    public Func<IOSCPacket, Task>? OnPacketReceived;
 
     public OSCReceiver(int bufferSize = 256)
     {
@@ -80,18 +79,15 @@ public class OSCReceiver
 
     private async Task runReceiveLoop()
     {
-        Debug.Assert(tokenSource is not null);
-        Debug.Assert(socket is not null);
-
-        while (!tokenSource.IsCancellationRequested)
+        while (!tokenSource!.IsCancellationRequested)
         {
             try
             {
-                var receivedBytes = await socket.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
+                var receivedBytes = await socket!.ReceiveAsync(buffer, SocketFlags.None, tokenSource.Token);
                 if (receivedBytes == 0) continue;
 
                 var packet = OSCDecoder.Decode(buffer.AsSpan(0, receivedBytes));
-                if (packet is not null) OnPacketReceived?.Invoke(packet);
+                if (packet is not null && OnPacketReceived is not null) await OnPacketReceived.Invoke(packet);
             }
             catch (OperationCanceledException)
             {
