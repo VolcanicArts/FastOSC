@@ -1,6 +1,6 @@
 # FastOSC
 
-FastOSC is a fast and memory-optimised C# OSC (Open Sound Control) library for .NET8+.
+FastOSC is a fast and memory-optimised C# OSC (Open Sound Control) library for .NET 8 and above.
 
 [![Nuget](https://img.shields.io/nuget/v/VolcanicArts.FastOSC)](https://www.nuget.org/packages/VolcanicArts.FastOSC/)
 
@@ -46,17 +46,23 @@ else if (packet is OSCBundle bundle)
 }
 ```
 
+Full OSC 1.0 spec is supported for address pattern matching.
+
+```csharp
+var pattern = new OSCAddressPattern("/{test?,data*,[a-z]oo}");
+var isMatch = pattern.IsMatch("/test1");
+```
+
 ## Benchmarks
 Encode/Decode benchmarks were ran with the address set to `/avatar/parameters/VRCOSC/Media/Position` and a single float argument, as it represents a real-world use of this library.
 Benchmarks were ran on an i7-11700k, Windows 10.
 
-| Operation            | Library             | Mean (ns)  | StdDev (ns) | Ops/sec      | Allocated (B) | Gen0   | Gen1   |
-|----------------------|---------------------|------------|-------------|--------------|---------------| ------ | ------ |
-| **Message Encode**   | FastOSC             | **35.75**  | 0.375       | **~27.97 M** | **80**        | 0.0095 | -      |
-|                      | FastOSC (ArrayPool) | **24.14**  | 0.146       | **~41.43 M** | **0**         | -      | -      |
-|                      | RugOsc              | 83.11      | 2.129       | ~12.03 M     | 168           | 0.0200 | -      |
-| **Message Decode**   | FastOSC             | **39.00**  | 0.722       | **~25.64 M** | **192**       | 0.0229 | -      |
-|                      | RugOsc              | 134.77     | 1.260       | ~7.42 M      | 480           | 0.0572 | -      |
-| **Pattern Matching** | FastOSC             | 1,297.00   | 28.000      | ~0.77 M      | 3,270         | 0.3986 | 0.0019 |
-|                      | FastOSC (Caching)   | **107.54** | 0.452       | **~9.30 M**  | **32**        | 0.0038 | -      |
-|                      | RugOsc              | 3,274.29   | 86.136      | ~0.31 M      | 10,528        | 1.2550 | 0.0381 |
+| Operation        | Library             | Mean         | Speed Comparison | Ops/sec | Mem Alloc | Memory Comparison |
+| ---------------- |---------------------|--------------|------------------| ------- | --------- |-------------------|
+| Message Encode   | FastOSC             | 36.57 ns     | 2.27x faster     | 27.34 M | 80 B      | 2.1x less         |
+|                  | FastOSC (ArrayPool) | 19.39 ns     | 4.28x faster     | 51.58 M | 0 B       | Inf x less        |
+|                  | RugOsc              | 83.11 ns     | –                | 12.03 M | 168 B     | –                 |
+| Message Decode   | FastOSC             | 35.95 ns     | 3.75x faster     | 27.81 M | 192 B     | 2.5x less         |
+|                  | RugOsc              | 134.77 ns    | –                | 7.42 M  | 480 B     | –                 |
+| Pattern Matching | FastOSC             | 1,165.00 ns  | 2.81x faster     | 0.86 M  | 3,270 B   | 3.2x less         |
+|                  | RugOsc              | 3,274.29 ns  | –                | 0.31 M  | 10,528 B  | –                 |

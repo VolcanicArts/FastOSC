@@ -1,43 +1,28 @@
 ﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
-using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
 namespace FastOSC;
 
 public record OSCAddressPattern
 {
-    private static readonly ConcurrentDictionary<string, Regex> regex_cache = new();
-
     public readonly string Pattern;
     private readonly Regex regex;
 
     public OSCAddressPattern(string pattern)
     {
         Pattern = pattern;
-        regex = getRegex();
-    }
-
-    private Regex getRegex()
-    {
-        if (regex_cache.TryGetValue(Pattern, out var foundRegex)) return foundRegex;
-
-        var createdRegex = convertRootPatternToRegex(Pattern);
-        regex_cache.TryAdd(Pattern, createdRegex);
-        return createdRegex;
+        regex = convertRootPatternToRegex(Pattern);
     }
 
     public bool IsMatch(string matchingAddress) => regex.IsMatch(matchingAddress);
 
     public static bool IsValid(string pattern)
     {
-        if (regex_cache.ContainsKey(pattern)) return true;
-
         try
         {
-            var createdRegex = convertRootPatternToRegex(pattern);
-            regex_cache.TryAdd(pattern, createdRegex);
+            convertRootPatternToRegex(pattern);
             return true;
         }
         catch
