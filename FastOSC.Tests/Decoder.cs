@@ -92,6 +92,20 @@ public static class Decoder
     }
 
     [Test]
+    public static void DecodingFloat3Test()
+    {
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.FLOAT, OSCConst.FLOAT, OSCConst.FLOAT, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 }) as OSCMessage;
+
+        Assert.That(message, Is.Not.Null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(message.Address, Is.EqualTo(test_string));
+            Assert.That(message.Arguments, Is.EqualTo(new object?[] { 1f, 1f, 1f }));
+        });
+    }
+
+    [Test]
     public static void DecodingLongTest()
     {
         var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCConst.COMMA, OSCConst.LONG, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }) as OSCMessage;

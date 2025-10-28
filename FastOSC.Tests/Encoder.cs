@@ -62,6 +62,15 @@ public static class Encoder
     }
 
     [Test]
+    public static void EncodingFloat3Test()
+    {
+        var message = new OSCMessage(test_string, 1f, 1f, 1f);
+        var encodedData = OSCEncoder.Encode(message);
+
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,fff\0\0\0\0"u8.ToArray().Concat(new byte[] { 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 })));
+    }
+
+    [Test]
     public static void EncodingLongTest()
     {
         var message = new OSCMessage(test_string, 1L);

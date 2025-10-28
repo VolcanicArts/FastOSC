@@ -15,6 +15,12 @@ public record OSCBundle : IOSCPacket
         TimeTag = timeTag;
         Packets = packets;
     }
+
+    public OSCBundle(DateTime dateTime, params IOSCPacket[] packets)
+    {
+        TimeTag = new OSCTimeTag(dateTime);
+        Packets = packets;
+    }
 }
 
 public record OSCMessage : IOSCPacket
@@ -24,7 +30,7 @@ public record OSCMessage : IOSCPacket
 
     public OSCMessage(string address, params object?[] arguments)
     {
-        if (string.IsNullOrEmpty(address)) throw new InvalidOperationException($"{nameof(address)} must be non-null and have a non-zero length");
+        if (string.IsNullOrWhiteSpace(address)) throw new InvalidOperationException($"{nameof(address)} must be a non-null, non-zero length, and non-whitespace string");
         if (arguments.Length == 0) throw new InvalidOperationException($"{nameof(arguments)} must have a non-zero length");
 
         Address = address;
