@@ -43,11 +43,25 @@ public class OSCSender
         }
     }
 
-    public void Send(OSCMessage message)
+    public async Task Send(IOSCPacket packet)
     {
         if (socket is null || !socket.Connected) throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
 
-        var data = OSCEncoder.Encode(message);
-        socket.Send(data);
+        switch (packet)
+        {
+            case OSCMessage message:
+            {
+                var data = OSCEncoder.Encode(message);
+                await socket.SendAsync(data);
+                break;
+            }
+
+            case OSCBundle bundle:
+            {
+                var data = OSCEncoder.Encode(bundle);
+                await socket.SendAsync(data);
+                break;
+            }
+        }
     }
 }

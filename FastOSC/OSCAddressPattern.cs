@@ -18,6 +18,8 @@ public record OSCAddressPattern
 
     public bool IsMatch(string matchingAddress) => regex.IsMatch(matchingAddress);
 
+    public Match Match(string matchingAddress) => regex.Match(matchingAddress);
+
     public static bool IsValid(string pattern)
     {
         try
