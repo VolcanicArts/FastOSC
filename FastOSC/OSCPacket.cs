@@ -1,4 +1,4 @@
-﻿// Copyright (c) VolcanicArts. Licensed under the LGPL License.
+// Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
 namespace FastOSC;
@@ -30,8 +30,8 @@ public record OSCMessage : IOSCPacket
 
     public OSCMessage(string address, params object?[] arguments)
     {
-        if (string.IsNullOrWhiteSpace(address)) throw new InvalidOperationException($"{nameof(address)} must be a non-null, non-zero length, and non-whitespace string");
-        if (arguments.Length == 0) throw new InvalidOperationException($"{nameof(arguments)} must have a non-zero length");
+        ArgumentException.ThrowIfNullOrWhiteSpace(address);
+        ArgumentOutOfRangeException.ThrowIfZero(arguments.Length, nameof(arguments));
 
         Address = address;
         Arguments = arguments;
