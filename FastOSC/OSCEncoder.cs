@@ -72,18 +72,25 @@ public static class OSCEncoder
 
         foreach (var element in bundle.Packets)
         {
+            var lengthIndex = index;
+            index += 4;
+            var elementIndex = index;
+
             switch (element)
             {
                 case OSCBundle subBundle:
-                    writeInt(data, ref index, GetEncodedLength(subBundle));
                     encodeBundle(data, ref index, subBundle);
                     break;
 
                 case OSCMessage message:
-                    writeInt(data, ref index, GetEncodedLength(message));
                     encodeMessage(data, ref index, message);
                     break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(bundle), bundle, $"Unknown {nameof(IOSCPacket)} within bundle");
             }
+
+            writeIntBE(data, ref lengthIndex, index - elementIndex);
         }
     }
 
@@ -232,7 +239,7 @@ public static class OSCEncoder
                     break;
 
                 case int intValue:
-                    writeInt(data, ref index, intValue);
+                    writeIntBE(data, ref index, intValue);
                     break;
 
                 case float floatValue:
@@ -282,13 +289,13 @@ public static class OSCEncoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeChar(Span<byte> data, ref int index, char v) => writeInt(data, ref index, v & 0xFF);
+    private static void writeChar(Span<byte> data, ref int index, char v) => writeIntBE(data, ref index, v);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeRGBA(Span<byte> data, ref int index, OSCRGBA v) => writeInt(data, ref index, v.R << 24 | v.G << 16 | v.B << 8 | v.A);
+    private static void writeRGBA(Span<byte> data, ref int index, OSCRGBA v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCRGBA, int>(v));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeMidi(Span<byte> data, ref int index, OSCMidi v) => writeInt(data, ref index, v.PortID << 24 | v.Status << 16 | v.Data1 << 8 | v.Data2);
+    private static void writeMidi(Span<byte> data, ref int index, OSCMidi v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCMidi, int>(v));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeTimeTag(Span<byte> data, ref int index, OSCTimeTag v) => writeUlong(data, ref index, v.Value);
@@ -305,7 +312,7 @@ public static class OSCEncoder
     private static void writeBlob(Span<byte> data, ref int index, byte[] value)
     {
         var length = value.Length;
-        writeInt(data, ref index, length);
+        writeIntBE(data, ref index, length);
 
         value.CopyTo(data[index..]);
         index += length;
@@ -314,9 +321,16 @@ public static class OSCEncoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeInt(Span<byte> data, ref int index, int value)
+    private static void writeIntBE(Span<byte> data, ref int index, int value)
     {
         BinaryPrimitives.WriteInt32BigEndian(data[index..], value);
+        index += 4;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void writeIntLE(Span<byte> data, ref int index, int value)
+    {
+        BinaryPrimitives.WriteInt32LittleEndian(data[index..], value);
         index += 4;
     }
 
