@@ -17,13 +17,22 @@ public static class OSCUtils
     /// Aligns an index to an interval of 4 and writes nulls where needed
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void AlignAndWriteNulls(Span<byte> data, ref int index, bool includeNullTerminator)
+    public static void AlignAndWriteNulls(Span<byte> data, ref int index)
     {
-        if (includeNullTerminator) data[index++] = 0;
         var pad = Align(index) - index;
         if (pad >= 1) data[index++] = 0;
         if (pad >= 2) data[index++] = 0;
         if (pad == 3) data[index++] = 0;
+    }
+
+    /// <summary>
+    /// Aligns an index to an interval of 4 and writes nulls where needed, with an included null terminator at <paramref name="index"/>
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void AlignAndWriteNullsWithTerminator(Span<byte> data, ref int index)
+    {
+        data[index++] = 0;
+        AlignAndWriteNulls(data, ref index);
     }
 
     /// <summary>

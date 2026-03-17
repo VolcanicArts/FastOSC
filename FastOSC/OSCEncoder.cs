@@ -127,9 +127,12 @@ public static class OSCEncoder
     /// <summary>
     /// Calculates the encoded length of the <see cref="OSCMessage"/>
     /// </summary>
-    public static int GetEncodedLength(OSCMessage message) => OSCUtils.Align(encoding.GetByteCount(message.Address) + 1) // +1 for null terminator
-                                                              + OSCUtils.Align(calculateTypeTagsLength(message.Arguments) + 2) // +2 for comma + null terminator
-                                                              + calculateArgumentsLength(message.Arguments);
+    public static int GetEncodedLength(OSCMessage message)
+    {
+        var addressLength = OSCUtils.Align(encoding.GetByteCount(message.Address) + 1); // +1 for null terminator
+        calculateLengths(message.Arguments, out var typeTagsLength, out var argumentsLength);
+        return addressLength + OSCUtils.Align(typeTagsLength + 2) + argumentsLength; // +2 for comma + null terminator
+    }
 
     private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message)
     {
@@ -142,91 +145,140 @@ public static class OSCEncoder
 
     #region Encoding
 
-    private static int calculateTypeTagsLength(object?[] arguments)
+    private static void calculateLengths(ReadOnlySpan<object?> arguments, out int typeTagsLength, out int argumentsLength)
     {
-        var length = 0;
+        typeTagsLength = 0;
+        argumentsLength = 0;
 
         foreach (var argument in arguments)
         {
-            if (argument is object?[] internalArrayValue)
-                length += calculateTypeTagsLength(internalArrayValue) + 2; // '[' + ']' length
-            else
-                length += 1;
-        }
-
-        return length;
-    }
-
-    private static int calculateArgumentsLength(object?[] arguments)
-    {
-        var length = 0;
-
-        foreach (var value in arguments)
-        {
-            length += value switch
+            switch (argument)
             {
-                string str => OSCUtils.Align(encoding.GetByteCount(str) + 1), // +1 for null terminator
-                int => 4,
-                float.PositiveInfinity => 0,
-                float => 4,
-                byte[] blob => OSCUtils.Align(blob.Length) + 4, // +4 for encoded length
-                long => 8,
-                double => 8,
-                OSCTimeTag => 8,
-                char => 4,
-                OSCRGBA => 4,
-                OSCMidi => 4,
-                null => 0,
-                bool => 0,
-                object?[] subArrayArguments => calculateArgumentsLength(subArrayArguments),
-                _ => throw new ArgumentOutOfRangeException($"{value.GetType()} is an unsupported type")
-            };
-        }
+                case float f:
+                    typeTagsLength += 1;
+                    argumentsLength += float.IsPositiveInfinity(f) ? 0 : 4;
+                    break;
 
-        return length;
+                case string str:
+                    typeTagsLength += 1;
+                    argumentsLength += OSCUtils.Align(encoding.GetByteCount(str) + 1);
+                    break;
+
+                case byte[] blob:
+                    typeTagsLength += 1;
+                    argumentsLength += OSCUtils.Align(blob.Length) + 4;
+                    break;
+
+                case long:
+                case double:
+                case OSCTimeTag:
+                    typeTagsLength += 1;
+                    argumentsLength += 8;
+                    break;
+
+                case int:
+                case char:
+                case OSCRGBA:
+                case OSCMidi:
+                    typeTagsLength += 1;
+                    argumentsLength += 4;
+                    break;
+
+                case null:
+                case bool:
+                    typeTagsLength += 1;
+                    break;
+
+                case object?[] sub:
+                    calculateLengths(sub, out var subTypeTagsLength, out var subArgumentsLength);
+                    typeTagsLength += subTypeTagsLength + 2;
+                    argumentsLength += subArgumentsLength;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type");
+            }
+        }
     }
 
-    private static void writeTypeTags(Span<byte> data, ref int index, object?[] arguments)
+    private static void writeTypeTags(Span<byte> data, ref int index, ReadOnlySpan<object?> arguments)
     {
         data[index++] = OSCConst.COMMA;
         writeTypeTagSymbols(data, ref index, arguments);
-        OSCUtils.AlignAndWriteNulls(data, ref index, true);
+        OSCUtils.AlignAndWriteNullsWithTerminator(data, ref index);
     }
 
-    private static void writeTypeTagSymbols(Span<byte> data, ref int index, object?[] arguments)
+    private static void writeTypeTagSymbols(Span<byte> data, ref int index, ReadOnlySpan<object?> arguments)
     {
         foreach (var argument in arguments)
         {
-            if (argument is object?[] arrayArguments)
+            switch (argument)
             {
-                data[index++] = OSCConst.ARRAY_BEGIN;
-                writeTypeTagSymbols(data, ref index, arrayArguments);
-                data[index++] = OSCConst.ARRAY_END;
-                continue;
-            }
+                case string:
+                    data[index++] = OSCConst.STRING;
+                    break;
 
-            data[index++] = argument switch
-            {
-                string => OSCConst.STRING,
-                int => OSCConst.INT,
-                float.PositiveInfinity => OSCConst.INFINITY,
-                float => OSCConst.FLOAT,
-                true => OSCConst.TRUE,
-                false => OSCConst.FALSE,
-                byte[] => OSCConst.BLOB,
-                long => OSCConst.LONG,
-                double => OSCConst.DOUBLE,
-                char => OSCConst.CHAR,
-                null => OSCConst.NIL,
-                OSCRGBA => OSCConst.RGBA,
-                OSCMidi => OSCConst.MIDI,
-                OSCTimeTag => OSCConst.TIMETAG,
-                _ => throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type")
-            };
+                case int:
+                    data[index++] = OSCConst.INT;
+                    break;
+
+                case float floatArgument:
+                    data[index++] = float.IsPositiveInfinity(floatArgument) ? OSCConst.INFINITY : OSCConst.FLOAT;
+                    break;
+
+                case true:
+                    data[index++] = OSCConst.TRUE;
+                    break;
+
+                case false:
+                    data[index++] = OSCConst.FALSE;
+                    break;
+
+                case byte[]:
+                    data[index++] = OSCConst.BLOB;
+                    break;
+
+                case long:
+                    data[index++] = OSCConst.LONG;
+                    break;
+
+                case double:
+                    data[index++] = OSCConst.DOUBLE;
+                    break;
+
+                case char:
+                    data[index++] = OSCConst.CHAR;
+                    break;
+
+                case null:
+                    data[index++] = OSCConst.NIL;
+                    break;
+
+                case OSCRGBA:
+                    data[index++] = OSCConst.RGBA;
+                    break;
+
+                case OSCMidi:
+                    data[index++] = OSCConst.MIDI;
+                    break;
+
+                case OSCTimeTag:
+                    data[index++] = OSCConst.TIMETAG;
+                    break;
+
+                case object?[] arrayArgument:
+                    data[index++] = OSCConst.ARRAY_BEGIN;
+                    writeTypeTagSymbols(data, ref index, arrayArgument);
+                    data[index++] = OSCConst.ARRAY_END;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type");
+            }
         }
     }
 
-    private static void writeArguments(Span<byte> data, ref int index, object?[] values)
+    private static void writeArguments(Span<byte> data, ref int index, ReadOnlySpan<object?> values)
     {
         foreach (var value in values)
         {
@@ -305,7 +357,7 @@ public static class OSCEncoder
     {
         var bytesWritten = encoding.GetBytes(value, data[index..]);
         index += bytesWritten;
-        OSCUtils.AlignAndWriteNulls(data, ref index, true);
+        OSCUtils.AlignAndWriteNullsWithTerminator(data, ref index);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -317,7 +369,7 @@ public static class OSCEncoder
         value.CopyTo(data[index..]);
         index += length;
 
-        OSCUtils.AlignAndWriteNulls(data, ref index, false);
+        OSCUtils.AlignAndWriteNulls(data, ref index);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
