@@ -20,9 +20,23 @@ public static class OSCUtils
     public static void AlignAndWriteNulls(Span<byte> data, ref int index)
     {
         var pad = Align(index) - index;
-        if (pad >= 1) data[index++] = 0;
-        if (pad >= 2) data[index++] = 0;
-        if (pad == 3) data[index++] = 0;
+
+        switch (pad)
+        {
+            case 3:
+                data[index + 2] = 0;
+                goto case 2;
+
+            case 2:
+                data[index + 1] = 0;
+                goto case 1;
+
+            case 1:
+                data[index] = 0;
+                break;
+        }
+
+        index += pad;
     }
 
     /// <summary>
@@ -55,22 +69,22 @@ public static class OSCUtils
     /// </summary>
     public static int FindMatchingArrayEnd(ReadOnlySpan<byte> tags, int beginIndex)
     {
-        if (beginIndex < 0 || beginIndex >= tags.Length || tags[beginIndex] != OSCConst.ARRAY_BEGIN)
+        if (beginIndex < 0 || beginIndex >= tags.Length || tags[beginIndex] != OSCChar.ARRAY_BEGIN)
             throw new ArgumentOutOfRangeException(nameof(beginIndex));
 
         var depth = 1;
 
-        for (int i = beginIndex + 1; i < tags.Length; i++)
+        for (var i = beginIndex + 1; i < tags.Length; i++)
         {
             var t = tags[i];
 
             switch (t)
             {
-                case OSCConst.ARRAY_BEGIN:
+                case OSCChar.ARRAY_BEGIN:
                     depth++;
                     break;
 
-                case OSCConst.ARRAY_END when --depth == 0:
+                case OSCChar.ARRAY_END when --depth == 0:
                     return i;
             }
         }

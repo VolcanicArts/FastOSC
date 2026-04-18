@@ -25,9 +25,9 @@ public static class Encoder
     }
 
     [Test]
-    public static async Task EncodingNullTest()
+    public static async Task EncodingNilTest()
     {
-        var message = new OSCMessage(test_string, [null]);
+        var message = new OSCMessage(test_string, OSC.NIL);
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,N\0\0"u8.ToArray()));
@@ -38,7 +38,7 @@ public static class Encoder
     [Test]
     public static async Task EncodingInfinityTest()
     {
-        var message = new OSCMessage(test_string, float.PositiveInfinity);
+        var message = new OSCMessage(test_string, OSC.INFINITUM);
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,I\0\0"u8.ToArray()));
@@ -159,7 +159,7 @@ public static class Encoder
     [Test]
     public static async Task EncodingRGBATest()
     {
-        var message = new OSCMessage(test_string, new OSCRGBA(1, 2, 3, 4));
+        var message = new OSCMessage(test_string, OSC.RGBA(1, 2, 3, 4));
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,r\0\0"u8.ToArray().Concat(new byte[] { 0x01, 0x02, 0x03, 0x04 })));
@@ -168,12 +168,12 @@ public static class Encoder
     }
 
     [Test]
-    public static async Task EncodingMidiTest()
+    public static async Task EncodingMIDITest()
     {
-        var message = new OSCMessage(test_string, new OSCMidi(1, 2, 3, 4));
+        var message = new OSCMessage(test_string, OSC.MIDI(1, OSCMIDIStatus.SystemExclusive, 3, 4));
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,m\0\0"u8.ToArray().Concat(new byte[] { 0x01, 0x02, 0x03, 0x04 })));
+        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,m\0\0"u8.ToArray().Concat(new byte[] { 0x01, 0xF0, 0x03, 0x04 })));
 
         await sender.Send(message);
     }
@@ -181,7 +181,7 @@ public static class Encoder
     [Test]
     public static async Task EncodingTimeTagTest()
     {
-        var message = new OSCMessage(test_string, new OSCTimeTag(1234ul));
+        var message = new OSCMessage(test_string, OSC.TimeTag(1234ul));
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,t\0\0"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xD2 })));
@@ -192,7 +192,7 @@ public static class Encoder
     [Test]
     public static async Task EncodingArrayTest()
     {
-        var message = new OSCMessage(test_string, [new object?[] { 1 }]);
+        var message = new OSCMessage(test_string, [new object[] { 1 }]);
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,[i]"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })));
@@ -203,7 +203,7 @@ public static class Encoder
     [Test]
     public static async Task EncodingNestedArrayTest()
     {
-        var message = new OSCMessage(test_string, [new object?[] { new object?[] { new object?[] { 1 } } }]);
+        var message = new OSCMessage(test_string, [new object[] { new object[] { new object[] { 1 } } }]);
         var encodedData = OSCEncoder.Encode(message);
 
         Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,[[[i]]]"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })));
@@ -216,7 +216,7 @@ public static class Encoder
     {
         var message1 = new OSCMessage("/tst", 1);
         var message2 = new OSCMessage("/ts2", 2);
-        var bundle = new OSCBundle(new OSCTimeTag(OSCConst.OSC_EPOCH), message1, message2);
+        var bundle = new OSCBundle(OSC.EPOCH, message1, message2);
         var encodedData = OSCEncoder.Encode(bundle);
 
         Assert.That(encodedData, Is.EqualTo("#bundle\0\0\0\0\0\0\0\0\0\0\0\0\u0010/tst\0\0\0\0,i\0\0\0\0\0\u0001\0\0\0\u0010/ts2\0\0\0\0,i\0\0\0\0\0\u0002"u8.ToArray()));
@@ -228,6 +228,8 @@ public static class Encoder
     public static void AddressAlignBoundaries()
     {
         assertMessageStartsCorrectly("/a", 4);
+        assertMessageStartsCorrectly("/ab", 4);
+        assertMessageStartsCorrectly("/abc", 8);
         assertMessageStartsCorrectly("/abcd", 8);
         assertMessageStartsCorrectly("/abcdef", 8);
         assertMessageStartsCorrectly("/abcdefg", 12);

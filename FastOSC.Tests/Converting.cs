@@ -9,7 +9,7 @@ public static class Converting
     public static void ConvertingDateTimeToTimeTagTest()
     {
         var dateTime = DateTime.UtcNow;
-        var encodedDateTime = new OSCTimeTag(dateTime);
+        var encodedDateTime = OSC.TimeTag(dateTime);
         var decodedDateTime = encodedDateTime.ToDateTime();
 
         Assert.That(dateTime, Is.EqualTo(decodedDateTime).Within(TimeSpan.FromMilliseconds(1d)));

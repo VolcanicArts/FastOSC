@@ -12,12 +12,16 @@ public record OSCBundle : IOSCPacket
 
     public OSCBundle(OSCTimeTag timeTag, params IOSCPacket[] packets)
     {
+        ArgumentOutOfRangeException.ThrowIfZero(packets.Length, nameof(packets));
+
         TimeTag = timeTag;
         Packets = packets;
     }
 
     public OSCBundle(DateTime dateTime, params IOSCPacket[] packets)
     {
+        ArgumentOutOfRangeException.ThrowIfZero(packets.Length, nameof(packets));
+
         TimeTag = new OSCTimeTag(dateTime);
         Packets = packets;
     }
@@ -26,11 +30,11 @@ public record OSCBundle : IOSCPacket
 public record OSCMessage : IOSCPacket
 {
     public readonly string Address;
-    public readonly object?[] Arguments;
+    public readonly object[] Arguments;
 
-    public OSCMessage(string address, params object?[] arguments)
+    public OSCMessage(string address, params object[] arguments)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(address);
+        OSCValidation.ThrowIfInvalidAddress(address);
         ArgumentOutOfRangeException.ThrowIfZero(arguments.Length, nameof(arguments));
 
         Address = address;

@@ -2,7 +2,6 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -15,19 +14,18 @@ public static class OSCDecoder
 {
     private static readonly UTF8Encoding encoding = new(encoderShouldEmitUTF8Identifier: false);
 
-    public static bool TryDecode(ReadOnlySpan<byte> data, [NotNullWhen(true)] out IOSCPacket? packet)
-    {
-        packet = Decode(data);
-        return packet is not null;
-    }
-
-    public static IOSCPacket? Decode(ReadOnlySpan<byte> data)
+    /// <summary>
+    /// Decodes a <see cref="ReadOnlySpan{byte}"/> into an <see cref="IOSCPacket"/>.
+    /// </summary>
+    /// <param name="data">The data to decode</param>
+    /// <returns>The decoded <see cref="IOSCPacket"/></returns>
+    public static IOSCPacket Decode(ReadOnlySpan<byte> data)
     {
         var index = 0;
         return decode(data, ref index);
     }
 
-    private static IOSCPacket? decode(ReadOnlySpan<byte> data, ref int index)
+    private static IOSCPacket decode(ReadOnlySpan<byte> data, ref int index)
     {
         return data.Slice(index, 8).SequenceEqual("#bundle\0"u8) ? decodeBundle(data, ref index) : decodeMessage(data, ref index);
     }
@@ -45,7 +43,7 @@ public static class OSCDecoder
 
         while (packetIndex < data.Length)
         {
-            var packetLength = readInt(data, ref packetIndex);
+            var packetLength = readIntBE(data, ref packetIndex);
             packetIndex += packetLength;
             packetCount++;
         }
@@ -54,16 +52,10 @@ public static class OSCDecoder
 
         for (var i = 0; i < packetCount; i++)
         {
-            var packetLength = readInt(data, ref index);
+            var packetLength = readIntBE(data, ref index);
             var packet = Decode(data.Slice(index, packetLength));
             index += packetLength;
-
-            packets[i] = packet switch
-            {
-                OSCMessage message => message,
-                OSCBundle bundle => bundle,
-                _ => throw new ArgumentOutOfRangeException()
-            };
+            packets[i] = packet ?? throw new Exception("A packet inside a bundle was unable to be decoded");
         }
 
         return new OSCBundle(timeTag, packets);
@@ -73,15 +65,15 @@ public static class OSCDecoder
 
     #region Message
 
-    private static OSCMessage? decodeMessage(ReadOnlySpan<byte> data, ref int index)
+    private static OSCMessage decodeMessage(ReadOnlySpan<byte> data, ref int index)
     {
         var address = readAddress(data, ref index);
-        if (string.IsNullOrEmpty(address)) return null;
+        if (string.IsNullOrEmpty(address)) throw new Exception("No address was found");
 
         index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
 
         var typeTags = readTypeTags(data, ref index);
-        if (typeTags.IsEmpty) return null;
+        if (typeTags.IsEmpty) throw new Exception("No type tags were found");
 
         index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
 
@@ -91,7 +83,7 @@ public static class OSCDecoder
 
     private static string? readAddress(ReadOnlySpan<byte> data, ref int index)
     {
-        if (data[index] != OSCConst.SLASH) return null;
+        if (data[index] != OSCChar.SLASH) return null;
 
         var start = index;
         index = OSCUtils.FindNullTerminator(data, index);
@@ -100,23 +92,23 @@ public static class OSCDecoder
 
     private static ReadOnlySpan<byte> readTypeTags(ReadOnlySpan<byte> data, ref int index)
     {
-        if (data[index] != OSCConst.COMMA) return ReadOnlySpan<byte>.Empty;
+        if (data[index] != OSCChar.COMMA) return ReadOnlySpan<byte>.Empty;
 
         var start = index;
         index = OSCUtils.FindNullTerminator(data, index);
         return data.Slice(start + 1, index - (start + 1));
     }
 
-    private static object?[] readArguments(ReadOnlySpan<byte> typeTags, ReadOnlySpan<byte> data, ref int index)
+    private static object[] readArguments(ReadOnlySpan<byte> typeTags, ReadOnlySpan<byte> data, ref int index)
     {
-        var values = new object?[calculateArgumentsLength(typeTags)];
+        var values = new object[calculateArgumentsLength(typeTags)];
         var valueIndex = 0;
 
         for (var i = 0; i < typeTags.Length; i++)
         {
             var type = typeTags[i];
 
-            if (type == OSCConst.ARRAY_BEGIN)
+            if (type == OSCChar.ARRAY_BEGIN)
             {
                 var arrayEnd = OSCUtils.FindMatchingArrayEnd(typeTags, i);
                 var arr = readArguments(typeTags[(i + 1)..arrayEnd], data, ref index);
@@ -127,21 +119,21 @@ public static class OSCDecoder
 
             values[valueIndex++] = type switch
             {
-                OSCConst.STRING or OSCConst.ALT_STRING => readString(data, ref index),
-                OSCConst.INT => readInt(data, ref index),
-                OSCConst.INFINITY => float.PositiveInfinity,
-                OSCConst.FLOAT => readFloat(data, ref index),
-                OSCConst.TRUE => true,
-                OSCConst.FALSE => false,
-                OSCConst.BLOB => readBlob(data, ref index),
-                OSCConst.LONG => readLong(data, ref index),
-                OSCConst.DOUBLE => readDouble(data, ref index),
-                OSCConst.CHAR => readChar(data, ref index),
-                OSCConst.NIL => null,
-                OSCConst.RGBA => readRGBA(data, ref index),
-                OSCConst.MIDI => readMidi(data, ref index),
-                OSCConst.TIMETAG => readTimeTag(data, ref index),
-                _ => throw new ArgumentOutOfRangeException()
+                OSCChar.STRING or OSCChar.ALT_STRING => readString(data, ref index),
+                OSCChar.INT => readIntBE(data, ref index),
+                OSCChar.INFINITUM => OSC.INFINITUM,
+                OSCChar.FLOAT => readFloat(data, ref index),
+                OSCChar.TRUE => true,
+                OSCChar.FALSE => false,
+                OSCChar.BLOB => readBlob(data, ref index),
+                OSCChar.LONG => readLong(data, ref index),
+                OSCChar.DOUBLE => readDouble(data, ref index),
+                OSCChar.CHAR => readChar(data, ref index),
+                OSCChar.NIL => OSC.NIL,
+                OSCChar.RGBA => readRGBA(data, ref index),
+                OSCChar.MIDI => readMIDI(data, ref index),
+                OSCChar.TIMETAG => readTimeTag(data, ref index),
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unable to decode unknown argument type")
             };
         }
 
@@ -155,7 +147,7 @@ public static class OSCDecoder
 
         while (i < typeTags.Length)
         {
-            if (typeTags[i] == OSCConst.ARRAY_BEGIN)
+            if (typeTags[i] == OSCChar.ARRAY_BEGIN)
             {
                 length++;
                 var nestedLevel = 1;
@@ -166,11 +158,11 @@ public static class OSCDecoder
                 {
                     switch (typeTags[i])
                     {
-                        case OSCConst.ARRAY_BEGIN:
+                        case OSCChar.ARRAY_BEGIN:
                             nestedLevel++;
                             break;
 
-                        case OSCConst.ARRAY_END:
+                        case OSCChar.ARRAY_END:
                             nestedLevel--;
                             break;
                     }
@@ -189,25 +181,13 @@ public static class OSCDecoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static char readChar(ReadOnlySpan<byte> data, ref int index)
-    {
-        var value = readInt(data, ref index);
-        return (char)(value & 0xFF);
-    }
+    private static char readChar(ReadOnlySpan<byte> data, ref int index) => (char)readIntBE(data, ref index);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static OSCRGBA readRGBA(ReadOnlySpan<byte> data, ref int index)
-    {
-        var value = readInt(data, ref index);
-        return new OSCRGBA((byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value);
-    }
+    private static OSCRGBA readRGBA(ReadOnlySpan<byte> data, ref int index) => Unsafe.BitCast<int, OSCRGBA>(readIntLE(data, ref index));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static OSCMidi readMidi(ReadOnlySpan<byte> data, ref int index)
-    {
-        var value = readInt(data, ref index);
-        return new OSCMidi((byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value);
-    }
+    private static OSCMIDI readMIDI(ReadOnlySpan<byte> data, ref int index) => Unsafe.BitCast<int, OSCMIDI>(readIntLE(data, ref index));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OSCTimeTag readTimeTag(ReadOnlySpan<byte> data, ref int index)
@@ -230,16 +210,23 @@ public static class OSCDecoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static byte[] readBlob(ReadOnlySpan<byte> data, ref int index)
     {
-        var length = readInt(data, ref index);
+        var length = readIntBE(data, ref index);
         var byteArray = data.Slice(index, length).ToArray();
         index += OSCUtils.Align(length);
         return byteArray;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int readInt(ReadOnlySpan<byte> data, ref int index)
+    private static int readIntBE(ReadOnlySpan<byte> data, ref int index)
     {
         var value = BinaryPrimitives.ReadInt32BigEndian(data[index..]);
+        index += 4;
+        return value;
+    }
+
+    private static int readIntLE(ReadOnlySpan<byte> data, ref int index)
+    {
+        var value = BinaryPrimitives.ReadInt32LittleEndian(data[index..]);
         index += 4;
         return value;
     }

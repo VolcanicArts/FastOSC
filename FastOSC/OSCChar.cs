@@ -3,10 +3,8 @@
 
 namespace FastOSC;
 
-public static class OSCConst
+public static class OSCChar
 {
-    public static readonly DateTime OSC_EPOCH = new(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
     public const byte INT = 105; // 'i'
     public const byte FLOAT = 102; // 'f'
     public const byte STRING = 115; // 's'
@@ -21,7 +19,7 @@ public static class OSCConst
     public const byte TRUE = 84; // 'T'
     public const byte FALSE = 70; // 'F'
     public const byte NIL = 78; // 'N'
-    public const byte INFINITY = 73; // 'I'
+    public const byte INFINITUM = 73; // 'I'
     public const byte ARRAY_BEGIN = 91; // '['
     public const byte ARRAY_END = 93; // ']'
     public const byte COMMA = 44; // ','

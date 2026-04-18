@@ -39,12 +39,14 @@ public class OSCClient
             await OnPacketSent(message);
     }
 
-    public async Task SendBundle(OSCTimeTag timeTag, params IOSCPacket[] values)
+    private async Task sendBundle(OSCBundle bundle)
     {
-        var bundle = new OSCBundle(timeTag, values);
         await sender.Send(bundle);
 
         if (OnPacketSent is not null)
             await OnPacketSent(bundle);
     }
+
+    public Task SendBundle(OSCTimeTag timeTag, params IOSCPacket[] values) => sendBundle(new OSCBundle(timeTag, values));
+    public Task SendBundle(DateTime dateTime, params IOSCPacket[] values) => sendBundle(new OSCBundle(dateTime, values));
 }

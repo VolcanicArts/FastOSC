@@ -18,7 +18,7 @@ public static class OSCEncoder
     #region Bundle
 
     /// <summary>
-    /// Encodes an <see cref="OSCBundle"/> into a heap-allocated array.
+    /// Encodes an <see cref="OSCBundle"/> into a heap-allocated byte array.
     /// </summary>
     /// <param name="bundle">The bundle to encode</param>
     /// <returns>A heap-allocated byte array encoded with the contents of <paramref name="bundle"/></returns>
@@ -30,10 +30,10 @@ public static class OSCEncoder
     }
 
     /// <summary>
-    /// Encodes an <see cref="OSCBundle"/> into a given destination array.
+    /// Encodes an <see cref="OSCBundle"/> into a given destination <see cref="Span{byte}"/>.
     /// </summary>
     /// <param name="bundle">The bundle to encode</param>
-    /// <param name="dest">The destination array</param>
+    /// <param name="dest">The destination <see cref="Span{byte}"/></param>
     /// <remarks>
     /// You can call <see cref="GetEncodedLength(FastOSC.OSCBundle)"/> to rent the exact size for <paramref name="dest"/>
     /// </remarks>
@@ -44,8 +44,11 @@ public static class OSCEncoder
     }
 
     /// <summary>
-    /// Calculates the encoded length of the <see cref="OSCBundle"/>
+    /// Calculates the encoded length of an <see cref="OSCBundle"/>
     /// </summary>
+    /// <param name="bundle">The bundle to calculate the encoded length for</param>
+    /// <returns>The encoded length of the <paramref name="bundle"/></returns>
+    /// <exception cref="ArgumentOutOfRangeException">Throws if an unknown <see cref="IOSCPacket"/> is inside the provided <paramref name="bundle"/>, or any nested bundles</exception>
     public static int GetEncodedLength(OSCBundle bundle)
     {
         var length = 16; // header + timetag length
@@ -111,10 +114,10 @@ public static class OSCEncoder
     }
 
     /// <summary>
-    /// Encodes an <see cref="OSCMessage"/> into a given destination array.
+    /// Encodes an <see cref="OSCMessage"/> into a given destination <see cref="Span{byte}"/>.
     /// </summary>
     /// <param name="message">The message to encode</param>
-    /// <param name="dest">The destination array</param>
+    /// <param name="dest">The destination <see cref="Span{byte}"/></param>
     /// <remarks>
     /// You can call <see cref="GetEncodedLength(FastOSC.OSCMessage)"/> to rent the exact size for <paramref name="dest"/>
     /// </remarks>
@@ -125,8 +128,10 @@ public static class OSCEncoder
     }
 
     /// <summary>
-    /// Calculates the encoded length of the <see cref="OSCMessage"/>
+    /// Calculates the encoded length of an <see cref="OSCMessage"/>
     /// </summary>
+    /// <param name="message">The message to calculate the encoded length for</param>
+    /// <returns>The encoded length of the <paramref name="message"/></returns>
     public static int GetEncodedLength(OSCMessage message)
     {
         var addressLength = OSCUtils.Align(encoding.GetByteCount(message.Address) + 1); // +1 for null terminator
@@ -145,7 +150,7 @@ public static class OSCEncoder
 
     #region Encoding
 
-    private static void calculateLengths(ReadOnlySpan<object?> arguments, out int typeTagsLength, out int argumentsLength)
+    private static void calculateLengths(ReadOnlySpan<object> arguments, out int typeTagsLength, out int argumentsLength)
     {
         typeTagsLength = 0;
         argumentsLength = 0;
@@ -154,11 +159,6 @@ public static class OSCEncoder
         {
             switch (argument)
             {
-                case float f:
-                    typeTagsLength += 1;
-                    argumentsLength += float.IsPositiveInfinity(f) ? 0 : 4;
-                    break;
-
                 case string str:
                     typeTagsLength += 1;
                     argumentsLength += OSCUtils.Align(encoding.GetByteCount(str) + 1);
@@ -176,20 +176,22 @@ public static class OSCEncoder
                     argumentsLength += 8;
                     break;
 
+                case float:
                 case int:
                 case char:
                 case OSCRGBA:
-                case OSCMidi:
+                case OSCMIDI:
                     typeTagsLength += 1;
                     argumentsLength += 4;
                     break;
 
-                case null:
                 case bool:
+                case OSCNil:
+                case OSCInfinitum:
                     typeTagsLength += 1;
                     break;
 
-                case object?[] sub:
+                case object[] sub:
                     calculateLengths(sub, out var subTypeTagsLength, out var subArgumentsLength);
                     typeTagsLength += subTypeTagsLength + 2;
                     argumentsLength += subArgumentsLength;
@@ -201,84 +203,47 @@ public static class OSCEncoder
         }
     }
 
-    private static void writeTypeTags(Span<byte> data, ref int index, ReadOnlySpan<object?> arguments)
+    private static void writeTypeTags(Span<byte> data, ref int index, ReadOnlySpan<object> arguments)
     {
-        data[index++] = OSCConst.COMMA;
+        data[index++] = OSCChar.COMMA;
         writeTypeTagSymbols(data, ref index, arguments);
         OSCUtils.AlignAndWriteNullsWithTerminator(data, ref index);
     }
 
-    private static void writeTypeTagSymbols(Span<byte> data, ref int index, ReadOnlySpan<object?> arguments)
+    private static void writeTypeTagSymbols(Span<byte> data, ref int index, ReadOnlySpan<object> arguments)
     {
         foreach (var argument in arguments)
         {
-            switch (argument)
+            if (argument is object[] arrayArgument)
             {
-                case string:
-                    data[index++] = OSCConst.STRING;
-                    break;
-
-                case int:
-                    data[index++] = OSCConst.INT;
-                    break;
-
-                case float floatArgument:
-                    data[index++] = float.IsPositiveInfinity(floatArgument) ? OSCConst.INFINITY : OSCConst.FLOAT;
-                    break;
-
-                case true:
-                    data[index++] = OSCConst.TRUE;
-                    break;
-
-                case false:
-                    data[index++] = OSCConst.FALSE;
-                    break;
-
-                case byte[]:
-                    data[index++] = OSCConst.BLOB;
-                    break;
-
-                case long:
-                    data[index++] = OSCConst.LONG;
-                    break;
-
-                case double:
-                    data[index++] = OSCConst.DOUBLE;
-                    break;
-
-                case char:
-                    data[index++] = OSCConst.CHAR;
-                    break;
-
-                case null:
-                    data[index++] = OSCConst.NIL;
-                    break;
-
-                case OSCRGBA:
-                    data[index++] = OSCConst.RGBA;
-                    break;
-
-                case OSCMidi:
-                    data[index++] = OSCConst.MIDI;
-                    break;
-
-                case OSCTimeTag:
-                    data[index++] = OSCConst.TIMETAG;
-                    break;
-
-                case object?[] arrayArgument:
-                    data[index++] = OSCConst.ARRAY_BEGIN;
-                    writeTypeTagSymbols(data, ref index, arrayArgument);
-                    data[index++] = OSCConst.ARRAY_END;
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type");
+                data[index++] = OSCChar.ARRAY_BEGIN;
+                writeTypeTagSymbols(data, ref index, arrayArgument);
+                data[index++] = OSCChar.ARRAY_END;
+                continue;
             }
+
+            data[index++] = argument switch
+            {
+                string => OSCChar.STRING,
+                int => OSCChar.INT,
+                float => OSCChar.FLOAT,
+                true => OSCChar.TRUE,
+                false => OSCChar.FALSE,
+                byte[] => OSCChar.BLOB,
+                long => OSCChar.LONG,
+                double => OSCChar.DOUBLE,
+                char => OSCChar.CHAR,
+                OSCNil => OSCChar.NIL,
+                OSCInfinitum => OSCChar.INFINITUM,
+                OSCRGBA => OSCChar.RGBA,
+                OSCMIDI => OSCChar.MIDI,
+                OSCTimeTag => OSCChar.TIMETAG,
+                _ => throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type")
+            };
         }
     }
 
-    private static void writeArguments(Span<byte> data, ref int index, ReadOnlySpan<object?> values)
+    private static void writeArguments(Span<byte> data, ref int index, ReadOnlySpan<object> values)
     {
         foreach (var value in values)
         {
@@ -286,8 +251,8 @@ public static class OSCEncoder
             {
                 case true:
                 case false:
-                case null:
-                case float.PositiveInfinity:
+                case OSCNil:
+                case OSCInfinitum:
                     break;
 
                 case int intValue:
@@ -322,7 +287,7 @@ public static class OSCEncoder
                     writeRGBA(data, ref index, rgbaValue);
                     break;
 
-                case OSCMidi midiValue:
+                case OSCMIDI midiValue:
                     writeMidi(data, ref index, midiValue);
                     break;
 
@@ -330,7 +295,7 @@ public static class OSCEncoder
                     writeTimeTag(data, ref index, timeTagValue);
                     break;
 
-                case object?[] subArrayArguments:
+                case object[] subArrayArguments:
                     writeArguments(data, ref index, subArrayArguments);
                     break;
 
@@ -347,7 +312,7 @@ public static class OSCEncoder
     private static void writeRGBA(Span<byte> data, ref int index, OSCRGBA v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCRGBA, int>(v));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeMidi(Span<byte> data, ref int index, OSCMidi v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCMidi, int>(v));
+    private static void writeMidi(Span<byte> data, ref int index, OSCMIDI v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCMIDI, int>(v));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeTimeTag(Span<byte> data, ref int index, OSCTimeTag v) => writeUlong(data, ref index, v.Value);
@@ -361,7 +326,7 @@ public static class OSCEncoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeBlob(Span<byte> data, ref int index, byte[] value)
+    private static void writeBlob(Span<byte> data, ref int index, ReadOnlySpan<byte> value)
     {
         var length = value.Length;
         writeIntBE(data, ref index, length);
