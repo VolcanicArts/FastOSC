@@ -4,6 +4,8 @@
 using System.Buffers;
 using BenchmarkDotNet.Attributes;
 using Rug.Osc;
+using OscBundle = Rug.Osc.OscBundle;
+using OscMessage = Rug.Osc.OscMessage;
 
 namespace FastOSC.Benchmarks;
 
@@ -11,7 +13,7 @@ namespace FastOSC.Benchmarks;
 [OperationsPerSecond]
 public class FastOSC
 {
-    private const string test_address = "/0/dmx/0";
+    private const string test_address = "/avatar/parameters/VRCOSC/Media/Position";
     private const float test_value = 0.5f;
     private const string test_pattern = "/foo*bar[abc]?";
     private const string test_pattern_address = "/foobarac";
@@ -21,27 +23,36 @@ public class FastOSC
     private readonly ArrayPool<byte> pool = ArrayPool<byte>.Shared;
     private byte[] rentedArray = null!;
     private OscMessage rugOscMessage = null!;
+    private OscCore.OscMessage oscCoreMessage = null!;
 
     [GlobalSetup]
     public void Setup()
     {
         message = new OSCMessage(test_address, test_value);
         encodedMessage = OSCEncoder.Encode(message);
-        rentedArray = pool.Rent(128);
+        rentedArray = pool.Rent(1024);
         rugOscMessage = new OscMessage(test_address, test_value);
+        oscCoreMessage = new OscCore.OscMessage(test_address, test_value);
     }
 
-    [Benchmark]
+    //[Benchmark(Baseline = true)]
     public void FastOSC_FullMessageEncode()
     {
         var localMessage = new OSCMessage(test_address, 1f, 1f, 1f, OSC.RGBA(255, 0, 0, 255));
         var data = OSCEncoder.Encode(localMessage);
     }
 
-    [Benchmark(Baseline = true)]
+    //[Benchmark]
     public void RugOsc_FullMessageEncode()
     {
         var localMessage = new OscMessage(test_address, 1f, 1f, 1f, OscColor.FromArgb(255, 255, 0, 0));
+        var data = localMessage.ToByteArray();
+    }
+
+    //[Benchmark]
+    public void OscCore_FullMessageEncode()
+    {
+        var localMessage = new OscCore.OscMessage(test_address, 1f, 1f, 1f, OscCore.OscColor.FromArgb(255, 255, 0, 0));
         var data = localMessage.ToByteArray();
     }
 
@@ -67,6 +78,26 @@ public class FastOSC
     public void RugOsc_MessageEncode_ArrayPool()
     {
         rugOscMessage.Write(rentedArray);
+    }
+
+    //[Benchmark]
+    public void OscCore_MessageEncode_ArrayPool()
+    {
+        oscCoreMessage.Write(rentedArray, 0);
+    }
+
+    //[Benchmark]
+    public void FastOSC_MessageCreationEncode_ArrayPool()
+    {
+        var localMessage = new OSCMessage(test_address, test_value);
+        var data = OSCEncoder.Encode(localMessage);
+    }
+
+    //[Benchmark(Baseline = true)]
+    public void RugOsc_MessageCreationEncode_ArrayPool()
+    {
+        var localMessage = new OscMessage(test_address, test_value);
+        var data = localMessage.ToByteArray();
     }
 
     //[Benchmark(Baseline = true)]
@@ -95,7 +126,7 @@ public class FastOSC
         pattern.Match(test_pattern_address);
     }
 
-    //[Benchmark(Baseline = true)]
+    [Benchmark(Baseline = true)]
     public void FastOSC_Bundle()
     {
         var message1 = new OSCMessage("/tst", 1);
@@ -103,10 +134,10 @@ public class FastOSC
         var message3 = new OSCMessage("/tst11", OSC.MIDI(64, OSCMIDIStatus.SystemExclusive, 192, 255));
         var bundleInner = new OSCBundle(OSC.EPOCH, message2, message3);
         var bundle = new OSCBundle(OSC.EPOCH, message1, bundleInner);
-        OSCEncoder.Encode(bundle);
+        OSCEncoder.Encode(bundle, rentedArray);
     }
 
-    //[Benchmark]
+    [Benchmark]
     public void RugOsc_Bundle()
     {
         var message1 = new OscMessage("/tst", 1);
@@ -114,6 +145,17 @@ public class FastOSC
         var message3 = new OscMessage("/tst11", new OscMidiMessage(64, OscMidiSystemMessageType.SystemExclusive, 192, 255));
         var bundleInner = new OscBundle(OSC.EPOCH, message2, message3);
         var bundle = new OscBundle(OSC.EPOCH, message1, bundleInner);
-        bundle.ToByteArray();
+        bundle.Write(rentedArray);
+    }
+
+    [Benchmark]
+    public void OscCore_Bundle()
+    {
+        var message1 = new OscCore.OscMessage("/tst", 1);
+        var message2 = new OscCore.OscMessage("/tst1", 2f);
+        var message3 = new OscCore.OscMessage("/tst11", new OscCore.OscMidiMessage(64, OscCore.OscMidiSystemMessageType.SystemExclusive, 192, 255));
+        var bundleInner = new OscCore.OscBundle(OSC.EPOCH, message2, message3);
+        var bundle = new OscCore.OscBundle(OSC.EPOCH, message1, bundleInner);
+        bundle.Write(rentedArray, 0);
     }
 }
