@@ -64,4 +64,11 @@ public class OSCSender
             }
         }
     }
+
+    public async Task Send(ReadOnlyMemory<byte> data)
+    {
+        if (socket is null || !socket.Connected) throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
+
+        await socket.SendAsync(data);
+    }
 }

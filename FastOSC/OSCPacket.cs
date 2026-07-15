@@ -32,6 +32,9 @@ public record OSCMessage : IOSCPacket
     public readonly string Address;
     public readonly object[] Arguments;
 
+    internal readonly int TypeTagsLength;
+    internal readonly int ArgumentsLength;
+
     public OSCMessage(string address, params object[] arguments)
     {
         OSCValidation.ThrowIfInvalidAddress(address);
@@ -39,5 +42,8 @@ public record OSCMessage : IOSCPacket
 
         Address = address;
         Arguments = arguments;
+
+        OSCEncoder.CalculateLengths(Arguments, ref TypeTagsLength, ref ArgumentsLength);
+        TypeTagsLength = OSCUtils.Align(TypeTagsLength + 2); // +2 for comma + terminator
     }
 }

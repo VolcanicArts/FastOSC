@@ -3,6 +3,9 @@
 
 using System.Runtime.InteropServices;
 
+// ReSharper disable UnusedType.Global
+// ReSharper disable UnusedMember.Global
+
 namespace FastOSC;
 
 [StructLayout(LayoutKind.Sequential)]
@@ -64,8 +67,11 @@ public enum OSCMIDIStatus : byte
 
 public static class OSCMidiStatusExtensions
 {
-    /// <summary>
-    /// Combines a status type and a channel (0–15) into a status byte.
-    /// </summary>
-    public static byte OnChannel(this OSCMIDIStatus type, int channel) => (byte)((byte)type | channel & 0x0F);
+    extension(OSCMIDIStatus type)
+    {
+        /// <summary>
+        /// Combines a status type and a channel (0–15) into a status byte.
+        /// </summary>
+        public byte OnChannel(int channel) => (byte)((byte)type | channel & 0x0F);
+    }
 }

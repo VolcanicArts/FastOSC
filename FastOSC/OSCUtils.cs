@@ -2,6 +2,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace FastOSC;
 
@@ -20,19 +21,20 @@ public static class OSCUtils
     public static void AlignAndWriteNulls(Span<byte> data, ref int index)
     {
         var pad = Align(index) - index;
+        ref byte start = ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index);
 
         switch (pad)
         {
             case 3:
-                data[index + 2] = 0;
+                Unsafe.Add(ref start, 2) = 0;
                 goto case 2;
 
             case 2:
-                data[index + 1] = 0;
+                Unsafe.Add(ref start, 1) = 0;
                 goto case 1;
 
             case 1:
-                data[index] = 0;
+                start = 0;
                 break;
         }
 
@@ -45,7 +47,8 @@ public static class OSCUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void AlignAndWriteNullsWithTerminator(Span<byte> data, ref int index)
     {
-        data[index++] = 0;
+        Unsafe.Add(ref MemoryMarshal.GetReference(data), index) = 0;
+        index++;
         AlignAndWriteNulls(data, ref index);
     }
 

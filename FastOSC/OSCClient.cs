@@ -7,7 +7,6 @@ namespace FastOSC;
 
 public class OSCClient
 {
-    public event Func<IOSCPacket, Task>? OnPacketSent;
     public event Func<IOSCPacket, Task>? OnPacketReceived;
 
     private readonly OSCSender sender = new();
@@ -30,23 +29,9 @@ public class OSCClient
     public void DisableSend() => sender.Disconnect();
     public Task DisableReceive() => receiver.DisconnectAsync();
 
-    public async Task SendMessage(string address, params object?[] values)
-    {
-        var message = new OSCMessage(address, values);
-        await sender.Send(message);
+    public Task SendMessage(OSCMessage message) => sender.Send(message);
 
-        if (OnPacketSent is not null)
-            await OnPacketSent(message);
-    }
-
-    private async Task sendBundle(OSCBundle bundle)
-    {
-        await sender.Send(bundle);
-
-        if (OnPacketSent is not null)
-            await OnPacketSent(bundle);
-    }
-
+    private Task sendBundle(OSCBundle bundle) => sender.Send(bundle);
     public Task SendBundle(OSCTimeTag timeTag, params IOSCPacket[] values) => sendBundle(new OSCBundle(timeTag, values));
     public Task SendBundle(DateTime dateTime, params IOSCPacket[] values) => sendBundle(new OSCBundle(dateTime, values));
 }

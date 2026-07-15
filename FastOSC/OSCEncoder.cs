@@ -3,6 +3,7 @@
 
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 // ReSharper disable MemberCanBePrivate.Global
@@ -14,6 +15,7 @@ namespace FastOSC;
 public static class OSCEncoder
 {
     private static readonly UTF8Encoding encoding = new(encoderShouldEmitUTF8Identifier: false);
+    private static readonly ulong bundle_header = MemoryMarshal.Read<ulong>("#bundle\0"u8);
 
     #region Bundle
 
@@ -37,10 +39,12 @@ public static class OSCEncoder
     /// <remarks>
     /// You can call <see cref="GetEncodedLength(FastOSC.OSCBundle)"/> to rent the exact size for <paramref name="dest"/>
     /// </remarks>
-    public static void Encode(OSCBundle bundle, Span<byte> dest)
+    /// <returns>The number of bytes written</returns>
+    public static int Encode(OSCBundle bundle, Span<byte> dest)
     {
         var index = 0;
         encodeBundle(dest, ref index, bundle);
+        return index;
     }
 
     /// <summary>
@@ -57,8 +61,8 @@ public static class OSCEncoder
         {
             length += packet switch
             {
-                OSCBundle nestedBundle => GetEncodedLength(nestedBundle) + 4, // +4 for bundle element length
                 OSCMessage message => GetEncodedLength(message) + 4, // +4 for bundle element length
+                OSCBundle nestedBundle => GetEncodedLength(nestedBundle) + 4, // +4 for bundle element length
                 _ => throw new ArgumentOutOfRangeException(nameof(bundle), bundle, $"Unknown {nameof(IOSCPacket)} within bundle")
             };
         }
@@ -68,7 +72,7 @@ public static class OSCEncoder
 
     private static void encodeBundle(Span<byte> data, ref int index, OSCBundle bundle)
     {
-        "#bundle\0"u8.CopyTo(data.Slice(index, 8));
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), bundle_header);
         index += 8;
 
         writeTimeTag(data, ref index, bundle.TimeTag);
@@ -81,12 +85,12 @@ public static class OSCEncoder
 
             switch (element)
             {
-                case OSCBundle subBundle:
-                    encodeBundle(data, ref index, subBundle);
-                    break;
-
                 case OSCMessage message:
                     encodeMessage(data, ref index, message);
+                    break;
+
+                case OSCBundle subBundle:
+                    encodeBundle(data, ref index, subBundle);
                     break;
 
                 default:
@@ -114,17 +118,16 @@ public static class OSCEncoder
     }
 
     /// <summary>
-    /// Encodes an <see cref="OSCMessage"/> into a given destination <see cref="Span{byte}"/>.
+    /// Encodes an <see cref="OSCMessage"/> into <paramref name="dest"/>.
     /// </summary>
     /// <param name="message">The message to encode</param>
     /// <param name="dest">The destination <see cref="Span{byte}"/></param>
-    /// <remarks>
-    /// You can call <see cref="GetEncodedLength(FastOSC.OSCMessage)"/> to rent the exact size for <paramref name="dest"/>
-    /// </remarks>
-    public static void Encode(OSCMessage message, Span<byte> dest)
+    /// <returns>The number of bytes written</returns>
+    public static int Encode(OSCMessage message, Span<byte> dest)
     {
         var index = 0;
         encodeMessage(dest, ref index, message);
+        return index;
     }
 
     /// <summary>
@@ -132,176 +135,164 @@ public static class OSCEncoder
     /// </summary>
     /// <param name="message">The message to calculate the encoded length for</param>
     /// <returns>The encoded length of the <paramref name="message"/></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetEncodedLength(OSCMessage message)
-    {
-        var addressLength = OSCUtils.Align(encoding.GetByteCount(message.Address) + 1); // +1 for null terminator
-        calculateLengths(message.Arguments, out var typeTagsLength, out var argumentsLength);
-        return addressLength + OSCUtils.Align(typeTagsLength + 2) + argumentsLength; // +2 for comma + null terminator
-    }
+        => OSCUtils.Align(encoding.GetByteCount(message.Address) + 1) + message.TypeTagsLength + message.ArgumentsLength;
 
     private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message)
     {
         writeString(data, ref index, message.Address);
-        writeTypeTags(data, ref index, message.Arguments);
-        writeArguments(data, ref index, message.Arguments);
+
+        var tagBlockStart = index;
+        var tagIndex = tagBlockStart;
+        data[tagIndex++] = OSCChar.COMMA;
+
+        var argIndex = tagBlockStart + message.TypeTagsLength;
+        writeTagsAndArguments(data, ref tagIndex, ref argIndex, message.Arguments);
+
+        OSCUtils.AlignAndWriteNullsWithTerminator(data, ref tagIndex);
+        index = argIndex;
     }
 
     #endregion
 
     #region Encoding
 
-    private static void calculateLengths(ReadOnlySpan<object> arguments, out int typeTagsLength, out int argumentsLength)
+    private static void writeTagsAndArguments(Span<byte> data, ref int tagIndex, ref int argIndex, ReadOnlySpan<object> arguments)
     {
-        typeTagsLength = 0;
-        argumentsLength = 0;
-
         foreach (var argument in arguments)
         {
             switch (argument)
             {
-                case string str:
-                    typeTagsLength += 1;
-                    argumentsLength += OSCUtils.Align(encoding.GetByteCount(str) + 1);
-                    break;
-
-                case byte[] blob:
-                    typeTagsLength += 1;
-                    argumentsLength += OSCUtils.Align(blob.Length) + 4;
-                    break;
-
-                case long:
-                case double:
-                case OSCTimeTag:
-                    typeTagsLength += 1;
-                    argumentsLength += 8;
-                    break;
-
-                case float:
-                case int:
-                case char:
-                case OSCRGBA:
-                case OSCMIDI:
-                    typeTagsLength += 1;
-                    argumentsLength += 4;
-                    break;
-
-                case bool:
-                case OSCNil:
-                case OSCInfinitum:
-                    typeTagsLength += 1;
-                    break;
-
-                case object[] sub:
-                    calculateLengths(sub, out var subTypeTagsLength, out var subArgumentsLength);
-                    typeTagsLength += subTypeTagsLength + 2;
-                    argumentsLength += subArgumentsLength;
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type");
-            }
-        }
-    }
-
-    private static void writeTypeTags(Span<byte> data, ref int index, ReadOnlySpan<object> arguments)
-    {
-        data[index++] = OSCChar.COMMA;
-        writeTypeTagSymbols(data, ref index, arguments);
-        OSCUtils.AlignAndWriteNullsWithTerminator(data, ref index);
-    }
-
-    private static void writeTypeTagSymbols(Span<byte> data, ref int index, ReadOnlySpan<object> arguments)
-    {
-        foreach (var argument in arguments)
-        {
-            if (argument is object[] arrayArgument)
-            {
-                data[index++] = OSCChar.ARRAY_BEGIN;
-                writeTypeTagSymbols(data, ref index, arrayArgument);
-                data[index++] = OSCChar.ARRAY_END;
-                continue;
-            }
-
-            data[index++] = argument switch
-            {
-                string => OSCChar.STRING,
-                int => OSCChar.INT,
-                float => OSCChar.FLOAT,
-                true => OSCChar.TRUE,
-                false => OSCChar.FALSE,
-                byte[] => OSCChar.BLOB,
-                long => OSCChar.LONG,
-                double => OSCChar.DOUBLE,
-                char => OSCChar.CHAR,
-                OSCNil => OSCChar.NIL,
-                OSCInfinitum => OSCChar.INFINITUM,
-                OSCRGBA => OSCChar.RGBA,
-                OSCMIDI => OSCChar.MIDI,
-                OSCTimeTag => OSCChar.TIMETAG,
-                _ => throw new ArgumentOutOfRangeException($"{argument.GetType()} is an unsupported type")
-            };
-        }
-    }
-
-    private static void writeArguments(Span<byte> data, ref int index, ReadOnlySpan<object> values)
-    {
-        foreach (var value in values)
-        {
-            switch (value)
-            {
-                case true:
-                case false:
-                case OSCNil:
-                case OSCInfinitum:
-                    break;
-
                 case int intValue:
-                    writeIntBE(data, ref index, intValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.INT;
+                    writeIntBE(data, ref argIndex, intValue);
                     break;
 
                 case float floatValue:
-                    writeFloat(data, ref index, floatValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.FLOAT;
+                    writeFloat(data, ref argIndex, floatValue);
                     break;
 
                 case string stringValue:
-                    writeString(data, ref index, stringValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.STRING;
+                    writeString(data, ref argIndex, stringValue);
+                    break;
+
+                case true:
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.TRUE;
+                    break;
+
+                case false:
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.FALSE;
                     break;
 
                 case byte[] blobValue:
-                    writeBlob(data, ref index, blobValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.BLOB;
+                    writeBlob(data, ref argIndex, blobValue);
                     break;
 
                 case long longValue:
-                    writeLong(data, ref index, longValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.LONG;
+                    writeLong(data, ref argIndex, longValue);
                     break;
 
                 case double doubleValue:
-                    writeDouble(data, ref index, doubleValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.DOUBLE;
+                    writeDouble(data, ref argIndex, doubleValue);
                     break;
 
                 case char charValue:
-                    writeChar(data, ref index, charValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.CHAR;
+                    writeChar(data, ref argIndex, charValue);
                     break;
 
                 case OSCRGBA rgbaValue:
-                    writeRGBA(data, ref index, rgbaValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.RGBA;
+                    writeRGBA(data, ref argIndex, rgbaValue);
                     break;
 
                 case OSCMIDI midiValue:
-                    writeMidi(data, ref index, midiValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.MIDI;
+                    writeMidi(data, ref argIndex, midiValue);
                     break;
 
                 case OSCTimeTag timeTagValue:
-                    writeTimeTag(data, ref index, timeTagValue);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.TIMETAG;
+                    writeTimeTag(data, ref argIndex, timeTagValue);
                     break;
 
-                case object[] subArrayArguments:
-                    writeArguments(data, ref index, subArrayArguments);
+                case OSCNil:
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.NIL;
+                    break;
+
+                case OSCInfinitum:
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.INFINITUM;
+                    break;
+
+                case object[] subArray:
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.ARRAY_BEGIN;
+                    writeTagsAndArguments(data, ref tagIndex, ref argIndex, subArray);
+                    Unsafe.Add(ref MemoryMarshal.GetReference(data), tagIndex++) = OSCChar.ARRAY_END;
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException($"{value.GetType()} is an unsupported type");
+                    throw new ArgumentOutOfRangeException($"{argument?.GetType()} is an unsupported type");
             }
+        }
+    }
+
+    internal static void CalculateLengths(ReadOnlySpan<object> arguments, ref int typeTagsLength, ref int argumentsLength)
+    {
+        foreach (var argument in arguments)
+        {
+            calculateLength(argument, ref typeTagsLength, ref argumentsLength);
+        }
+    }
+
+    private static void calculateLength(object argument, ref int typeTagLength, ref int argumentLength)
+    {
+        switch (argument)
+        {
+            case string str:
+                typeTagLength += 1;
+                argumentLength += OSCUtils.Align(encoding.GetByteCount(str) + 1); // +1 for null terminator
+                break;
+
+            case byte[] blob:
+                typeTagLength += 1;
+                argumentLength += OSCUtils.Align(blob.Length) + 4; // +4 for length
+                break;
+
+            case long:
+            case double:
+            case OSCTimeTag:
+                typeTagLength += 1;
+                argumentLength += 8;
+                break;
+
+            case float:
+            case int:
+            case char:
+            case OSCRGBA:
+            case OSCMIDI:
+                typeTagLength += 1;
+                argumentLength += 4;
+                break;
+
+            case bool:
+            case OSCNil:
+            case OSCInfinitum:
+                typeTagLength += 1;
+                break;
+
+            case object[] sub:
+                CalculateLengths(sub, ref typeTagLength, ref argumentLength);
+                typeTagLength += 2; // +2 for []
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException($"{argument?.GetType()} is an unsupported type");
         }
     }
 
@@ -330,52 +321,66 @@ public static class OSCEncoder
     {
         var length = value.Length;
         writeIntBE(data, ref index, length);
-
-        value.CopyTo(data[index..]);
+        Unsafe.CopyBlockUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), ref MemoryMarshal.GetReference(value), (uint)length);
         index += length;
-
         OSCUtils.AlignAndWriteNulls(data, ref index);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeIntBE(Span<byte> data, ref int index, int value)
     {
-        BinaryPrimitives.WriteInt32BigEndian(data[index..], value);
+        if (BitConverter.IsLittleEndian) value = BinaryPrimitives.ReverseEndianness(value);
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), value);
         index += 4;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeIntLE(Span<byte> data, ref int index, int value)
     {
-        BinaryPrimitives.WriteInt32LittleEndian(data[index..], value);
+        if (!BitConverter.IsLittleEndian) value = BinaryPrimitives.ReverseEndianness(value);
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), value);
         index += 4;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeLong(Span<byte> data, ref int index, long value)
     {
-        BinaryPrimitives.WriteInt64BigEndian(data[index..], value);
+        if (BitConverter.IsLittleEndian) value = BinaryPrimitives.ReverseEndianness(value);
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), value);
         index += 8;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeUlong(Span<byte> data, ref int index, ulong value)
     {
-        BinaryPrimitives.WriteUInt64BigEndian(data[index..], value);
+        if (BitConverter.IsLittleEndian) value = BinaryPrimitives.ReverseEndianness(value);
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), value);
         index += 8;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeFloat(Span<byte> data, ref int index, float value)
     {
-        BinaryPrimitives.WriteSingleBigEndian(data[index..], value);
+        ref byte dest = ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index);
+
+        if (BitConverter.IsLittleEndian)
+            Unsafe.WriteUnaligned(ref dest, BinaryPrimitives.ReverseEndianness(BitConverter.SingleToInt32Bits(value)));
+        else
+            Unsafe.WriteUnaligned(ref dest, value);
+
         index += 4;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeDouble(Span<byte> data, ref int index, double value)
     {
-        BinaryPrimitives.WriteDoubleBigEndian(data[index..], value);
+        ref byte dest = ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index);
+
+        if (BitConverter.IsLittleEndian)
+            Unsafe.WriteUnaligned(ref dest, BinaryPrimitives.ReverseEndianness(BitConverter.DoubleToInt64Bits(value)));
+        else
+            Unsafe.WriteUnaligned(ref dest, value);
+
         index += 8;
     }
 
