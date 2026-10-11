@@ -72,9 +72,7 @@ public static class OSCEncoder
 
     private static void encodeBundle(Span<byte> data, ref int index, OSCBundle bundle)
     {
-        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), bundle_header);
-        index += 8;
-
+        writeUlongLE(data, ref index, bundle_header);
         writeTimeTag(data, ref index, bundle.TimeTag);
 
         foreach (var element in bundle.Packets)
@@ -306,7 +304,7 @@ public static class OSCEncoder
     private static void writeMidi(Span<byte> data, ref int index, OSCMIDI v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCMIDI, int>(v));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeTimeTag(Span<byte> data, ref int index, OSCTimeTag v) => writeUlong(data, ref index, v.Value);
+    private static void writeTimeTag(Span<byte> data, ref int index, OSCTimeTag v) => writeUlongBE(data, ref index, v.Value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeString(Span<byte> data, ref int index, string value)
@@ -351,7 +349,15 @@ public static class OSCEncoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeUlong(Span<byte> data, ref int index, ulong value)
+    private static void writeUlongLE(Span<byte> data, ref int index, ulong value)
+    {
+        if (!BitConverter.IsLittleEndian) value = BinaryPrimitives.ReverseEndianness(value);
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), value);
+        index += 8;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void writeUlongBE(Span<byte> data, ref int index, ulong value)
     {
         if (BitConverter.IsLittleEndian) value = BinaryPrimitives.ReverseEndianness(value);
         Unsafe.WriteUnaligned(ref Unsafe.Add(ref MemoryMarshal.GetReference(data), index), value);

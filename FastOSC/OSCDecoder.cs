@@ -3,6 +3,7 @@
 
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 // ReSharper disable UnusedMember.Global
@@ -13,6 +14,7 @@ namespace FastOSC;
 public static class OSCDecoder
 {
     private static readonly UTF8Encoding encoding = new(encoderShouldEmitUTF8Identifier: false);
+    private static readonly ulong bundle_header = MemoryMarshal.Read<ulong>("#bundle\0"u8);
 
     /// <summary>
     /// Decodes a <see cref="ReadOnlySpan{byte}"/> into an <see cref="IOSCPacket"/>.
@@ -27,7 +29,8 @@ public static class OSCDecoder
 
     private static IOSCPacket decode(ReadOnlySpan<byte> data, ref int index)
     {
-        return data.Slice(index, 8).SequenceEqual("#bundle\0"u8) ? decodeBundle(data, ref index) : decodeMessage(data, ref index);
+        var start = index;
+        return readULongLE(data, ref start) == bundle_header ? decodeBundle(data, ref index) : decodeMessage(data, ref index);
     }
 
     #region Bundle
@@ -71,14 +74,18 @@ public static class OSCDecoder
         if (string.IsNullOrEmpty(address)) throw new Exception("No address was found");
 
         index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
+        var addressLength = index;
 
         var typeTags = readTypeTags(data, ref index);
         if (typeTags.IsEmpty) throw new Exception("No type tags were found");
 
         index = OSCUtils.Align(index + 1); // +1 to adjust 0th-based to 1st-based
+        var typeTagLength = index - addressLength;
 
-        var values = readArguments(typeTags, data, ref index);
-        return new OSCMessage(address, values);
+        var arguments = readArguments(typeTags, data, ref index);
+        var argumentsLength = index - typeTagLength - addressLength;
+
+        return new OSCMessage(address, arguments, typeTagLength, argumentsLength);
     }
 
     private static string? readAddress(ReadOnlySpan<byte> data, ref int index)
@@ -192,7 +199,7 @@ public static class OSCDecoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OSCTimeTag readTimeTag(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = readULong(data, ref index);
+        var value = readULongBE(data, ref index);
         return new OSCTimeTag(value);
     }
 
@@ -219,48 +226,66 @@ public static class OSCDecoder
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int readIntBE(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = BinaryPrimitives.ReadInt32BigEndian(data[index..]);
+        var value = Unsafe.ReadUnaligned<int>(ref MemoryMarshal.GetReference(data[index..]));
         index += 4;
-        return value;
+
+        return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int readIntLE(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = BinaryPrimitives.ReadInt32LittleEndian(data[index..]);
+        var value = Unsafe.ReadUnaligned<int>(ref MemoryMarshal.GetReference(data[index..]));
         index += 4;
-        return value;
+
+        return !BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long readLong(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = BinaryPrimitives.ReadInt64BigEndian(data[index..]);
+        var value = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(data[index..]));
         index += 8;
-        return value;
+
+        return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong readULong(ReadOnlySpan<byte> data, ref int index)
+    private static ulong readULongLE(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = BinaryPrimitives.ReadUInt64BigEndian(data[index..]);
+        var value = Unsafe.ReadUnaligned<ulong>(ref MemoryMarshal.GetReference(data[index..]));
         index += 8;
-        return value;
+
+        return !BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong readULongBE(ReadOnlySpan<byte> data, ref int index)
+    {
+        var value = Unsafe.ReadUnaligned<ulong>(ref MemoryMarshal.GetReference(data[index..]));
+        index += 8;
+
+        return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float readFloat(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = BinaryPrimitives.ReadSingleBigEndian(data[index..]);
+        var value = Unsafe.ReadUnaligned<int>(ref MemoryMarshal.GetReference(data[index..]));
         index += 4;
-        return value;
+
+        value = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        return BitConverter.Int32BitsToSingle(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double readDouble(ReadOnlySpan<byte> data, ref int index)
     {
-        var value = BinaryPrimitives.ReadDoubleBigEndian(data[index..]);
+        var value = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(data[index..]));
         index += 8;
-        return value;
+
+        value = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        return BitConverter.Int64BitsToDouble(value);
     }
 
     #endregion

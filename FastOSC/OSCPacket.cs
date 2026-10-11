@@ -46,4 +46,16 @@ public record OSCMessage : IOSCPacket
         OSCEncoder.CalculateLengths(Arguments, ref TypeTagsLength, ref ArgumentsLength);
         TypeTagsLength = OSCUtils.Align(TypeTagsLength + 2); // +2 for comma + terminator
     }
+
+    internal OSCMessage(string address, object[] arguments, int typeTagsLength, int argumentsLength)
+    {
+        OSCValidation.ThrowIfInvalidAddress(address);
+        ArgumentOutOfRangeException.ThrowIfZero(arguments.Length, nameof(arguments));
+
+        Address = address;
+        Arguments = arguments;
+
+        TypeTagsLength = typeTagsLength;
+        ArgumentsLength = argumentsLength;
+    }
 }
