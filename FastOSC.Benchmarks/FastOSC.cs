@@ -68,6 +68,12 @@ public class FastOSC
         rugOscMessage.ToByteArray();
     }
 
+    //[Benchmark]
+    public void OscCore_MessageEncode()
+    {
+        oscCoreMessage.ToByteArray();
+    }
+
     //[Benchmark(Baseline = true)]
     public void FastOSC_MessageEncode_ArrayPool()
     {

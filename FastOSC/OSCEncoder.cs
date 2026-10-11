@@ -297,7 +297,7 @@ public static class OSCEncoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void writeChar(Span<byte> data, ref int index, char v) => writeIntBE(data, ref index, v);
+    private static void writeChar(Span<byte> data, ref int index, char v) => writeIntLE(data, ref index, v);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void writeRGBA(Span<byte> data, ref int index, OSCRGBA v) => writeIntLE(data, ref index, Unsafe.BitCast<OSCRGBA, int>(v));

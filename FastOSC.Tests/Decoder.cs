@@ -10,7 +10,7 @@ public static class Decoder
     [Test]
     public static void DecodingNilTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,N\0\0"u8.ToArray()) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x4E, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -24,7 +24,7 @@ public static class Decoder
     [Test]
     public static void DecodingInfinityTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,I\0\0"u8.ToArray()) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x49, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -38,7 +38,7 @@ public static class Decoder
     [Test]
     public static void DecodingBoolTrueTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,T\0\0"u8.ToArray()) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x54, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -52,7 +52,7 @@ public static class Decoder
     [Test]
     public static void DecodingBoolFalseTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,F\0\0"u8.ToArray()) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x46, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -66,7 +66,7 @@ public static class Decoder
     [Test]
     public static void DecodingIntTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.INT, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -80,7 +80,7 @@ public static class Decoder
     [Test]
     public static void DecodingFloatTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.FLOAT, 0x0, 0x0, 0x3F, 0x80, 0x00, 0x00 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x66, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -94,7 +94,7 @@ public static class Decoder
     [Test]
     public static void DecodingFloat3Test()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.FLOAT, OSCChar.FLOAT, OSCChar.FLOAT, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x66, 0x66, 0x66, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -108,7 +108,7 @@ public static class Decoder
     [Test]
     public static void DecodingLongTest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.LONG, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -122,8 +122,7 @@ public static class Decoder
     [Test]
     public static void DecodingDoubleTest()
     {
-        var message =
-            OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.DOUBLE, 0x0, 0x0, 0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x64, 0x00, 0x00, 0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -137,22 +136,21 @@ public static class Decoder
     [Test]
     public static void DecodingStringTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,s\0\0/tst\0\0\0\0"u8.ToArray()) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x73, 0x00, 0x00, 0x73, 0x6F, 0x6D, 0x65, 0x20, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6E, 0x67, 0x00, 0x00, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(message.Address, Is.EqualTo(test_string));
-            Assert.That(message.Arguments, Is.EqualTo(new object[] { test_string }));
+            Assert.That(message.Arguments, Is.EqualTo(new object[] { "some test string" }));
         }
     }
 
     [Test]
     public static void DecodingBlobTest()
     {
-        var message =
-            OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.BLOB, 0x0, 0x0, 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -166,7 +164,7 @@ public static class Decoder
     [Test]
     public static void DecodingCharTest()
     {
-        var message = OSCDecoder.Decode("/tst\0\0\0\0,c\0\0\0\0\0a"u8.ToArray()) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x63, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -180,7 +178,7 @@ public static class Decoder
     [Test]
     public static void DecodingRGBATest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.RGBA, 0x0, 0x0, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x72, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
@@ -194,148 +192,70 @@ public static class Decoder
     [Test]
     public static void DecodingMIDITest()
     {
-        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.MIDI, 0x0, 0x0, 0x01, 0x02, 0x03, 0x04 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x6D, 0x00, 0x00, 0x01, 0xF0, 0x03, 0x04 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(message.Address, Is.EqualTo(test_string));
-            Assert.That(message.Arguments, Is.EqualTo(new object[] { OSC.MIDI(1, 2, 3, 4) }));
+            Assert.That(message.Arguments, Is.EqualTo(new object[] { OSC.MIDI(1, OSCMIDIStatus.SystemExclusive, 3, 4) }));
         }
     }
 
     [Test]
     public static void DecodingTimeTagTest()
     {
-        var message =
-            OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.TIMETAG, 0x0, 0x0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xD2 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x74, 0x00, 0x00, 0x83, 0xAA, 0x7E, 0x80, 0x00, 0x00, 0x00, 0x00 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(message.Address, Is.EqualTo(test_string));
-            Assert.That(message.Arguments, Is.EqualTo(new object[] { OSC.TimeTag(1234ul) }));
+            Assert.That(message.Arguments, Is.EqualTo(new object[] { OSC.TimeTag(DateTime.UnixEpoch) }));
         }
     }
 
     [Test]
     public static void DecodingArrayTest()
     {
-        var message = OSCDecoder.Decode(new byte[]
-            { 0x2F, 0x74, 0x73, 0x74, 0x0, 0x0, 0x0, 0x0, OSCChar.COMMA, OSCChar.ARRAY_BEGIN, OSCChar.TRUE, OSCChar.ARRAY_END, 0x0, 0x0, 0x0, 0x0 }) as OSCMessage;
+        var message = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x5B, 0x69, 0x5D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }) as OSCMessage;
 
         Assert.That(message, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(message.Address, Is.EqualTo(test_string));
-            Assert.That(message.Arguments, Is.EqualTo(new object[] { new object[] { true } }));
+            Assert.That(message.Arguments, Has.Length.EqualTo(1));
+            Assert.That(message.Arguments[0], Is.EqualTo(new object[] { 1 }));
         }
     }
 
     [Test]
-    public static void DecodingArray_EmptyInner()
+    public static void DecodingNestedArrayTest()
     {
-        var bytes = new byte[]
-        {
-            0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00,
-            OSCChar.COMMA, OSCChar.ARRAY_BEGIN, OSCChar.ARRAY_BEGIN, OSCChar.ARRAY_END, OSCChar.ARRAY_END, 0x00, 0x00, 0x00
-        };
-
-        var msg = OSCDecoder.Decode(bytes) as OSCMessage;
-        Assert.That(msg, Is.Not.Null);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(msg!.Address, Is.EqualTo(test_string));
-
-            Assert.That(msg.Arguments, Is.EqualTo(new object[]
-            {
-                new object[] { new object[] { } }
-            }));
-        }
-    }
-
-    [Test]
-    public static void DecodingArray_NestedWithValues()
-    {
-        var bytes = new byte[]
-        {
-            0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00,
-            OSCChar.COMMA, OSCChar.ARRAY_BEGIN, OSCChar.ARRAY_BEGIN, OSCChar.INT, OSCChar.ARRAY_END, OSCChar.INT, OSCChar.ARRAY_END, 0x00,
-            0x00, 0x00, 0x00, 0x01,
-            0x00, 0x00, 0x00, 0x02
-        };
-
-        var msg = OSCDecoder.Decode(bytes) as OSCMessage;
+        var msg = OSCDecoder.Decode(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x5B, 0x5B, 0x5B, 0x69, 0x5D, 0x5D, 0x5D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }) as OSCMessage;
         Assert.That(msg, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
             Assert.That(msg.Address, Is.EqualTo(test_string));
-            Assert.That(msg.Arguments, Is.EqualTo(new object[] { new object[] { new object[] { 1 }, 2 } }));
-        }
-    }
-
-    [Test]
-    public static void DecodingArray_NoPayloadTagsInside()
-    {
-        var bytes = new byte[]
-        {
-            0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00,
-            OSCChar.COMMA, OSCChar.ARRAY_BEGIN, OSCChar.TRUE, OSCChar.FALSE, OSCChar.NIL, OSCChar.ARRAY_END, 0x00, 0x00
-        };
-
-        var msg = OSCDecoder.Decode(bytes) as OSCMessage;
-        Assert.That(msg, Is.Not.Null);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(msg!.Address, Is.EqualTo(test_string));
-
-            Assert.That(msg.Arguments, Is.EqualTo(new object[]
-            {
-                new object[] { true, false, OSC.NIL }
-            }));
-        }
-    }
-
-    [Test]
-    public static void DecodingArray_DeeplyNestedEmpty()
-    {
-        var bytes = new byte[]
-        {
-            0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00,
-            OSCChar.COMMA, OSCChar.ARRAY_BEGIN, OSCChar.ARRAY_BEGIN, OSCChar.ARRAY_BEGIN, OSCChar.ARRAY_END, OSCChar.ARRAY_END, OSCChar.ARRAY_END,
-            0x00, 0x00, 0x00, 0x00
-        };
-
-        var msg = OSCDecoder.Decode(bytes) as OSCMessage;
-        Assert.That(msg, Is.Not.Null);
-
-        using (Assert.EnterMultipleScope())
-        {
-            Assert.That(msg!.Address, Is.EqualTo(test_string));
-
-            Assert.That(msg.Arguments, Is.EqualTo(new object[]
-            {
-                new object[] { new object[] { new object[] { } } }
-            }));
+            Assert.That(msg.Arguments, Has.Length.EqualTo(1));
+            Assert.That(msg.Arguments[0], Is.EqualTo(new object[] { new object[] { new object[] { 1 } } }));
         }
     }
 
     [Test]
     public static void DecodingBundleTest()
     {
-        var message = OSCDecoder.Decode("#bundle\0\0\0\0\0\0\0\0\0\0\0\0\u0010/tst\0\0\0\0,i\0\0\0\0\0\u0001\0\0\0\u0010/ts2\0\0\0\0,i\0\0\0\0\0\u0002"u8) as OSCBundle;
+        var message = OSCDecoder.Decode(new byte[] { 0x23, 0x62, 0x75, 0x6E, 0x64, 0x6C, 0x65, 0x00, 0x83, 0xAA, 0x7E, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x2F, 0x74, 0x73, 0x32, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 }) as OSCBundle;
 
         Assert.That(message, Is.Not.Null);
 
         using (Assert.EnterMultipleScope())
         {
-            Assert.That(message.TimeTag, Is.EqualTo(OSC.TimeTag(OSC.EPOCH)));
+            Assert.That(message.TimeTag, Is.EqualTo(OSC.TimeTag(DateTime.UnixEpoch)));
             Assert.That(message.Packets, Has.Length.EqualTo(2));
             Assert.That(((OSCMessage)message.Packets[0]).Address, Is.EqualTo("/tst"));
             Assert.That(((OSCMessage)message.Packets[0]).Arguments[0], Is.EqualTo(1));

@@ -20,18 +20,25 @@ public class OSCClient
         SendEndpoint = sendEndpoint;
         ReceiveEndpoint = receiveEndpoint;
 
-        receiver.OnPacketReceived += packet => OnPacketReceived?.Invoke(packet) ?? Task.CompletedTask;
+        receiver.OnPacketReceived += raisePacketReceivedAsync;
     }
 
-    public Task EnableSend() => sender.ConnectAsync(SendEndpoint);
+    private async Task raisePacketReceivedAsync(IOSCPacket packet)
+    {
+        var handlers = OnPacketReceived;
+        if (handlers is null) return;
+
+        foreach (var handler in handlers.GetInvocationList().Cast<Func<IOSCPacket, Task>>())
+        {
+            await handler(packet).ConfigureAwait(false);
+        }
+    }
+
+    public Task EnableSendAsync() => sender.ConnectAsync(SendEndpoint);
     public void EnableReceive() => receiver.Connect(ReceiveEndpoint);
 
     public void DisableSend() => sender.Disconnect();
-    public Task DisableReceive() => receiver.DisconnectAsync();
+    public Task DisableReceiveAsync() => receiver.DisconnectAsync();
 
-    public Task SendMessage(OSCMessage message) => sender.Send(message);
-
-    private Task sendBundle(OSCBundle bundle) => sender.Send(bundle);
-    public Task SendBundle(OSCTimeTag timeTag, params IOSCPacket[] values) => sendBundle(new OSCBundle(timeTag, values));
-    public Task SendBundle(DateTime dateTime, params IOSCPacket[] values) => sendBundle(new OSCBundle(dateTime, values));
+    public Task SendPacketAsync(IOSCPacket packet, CancellationToken token = default) => sender.SendAsync(packet, token);
 }

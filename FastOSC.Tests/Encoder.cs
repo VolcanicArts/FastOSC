@@ -30,9 +30,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, OSC.NIL);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,N\0\0"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x4E, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -41,9 +41,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, OSC.INFINITUM);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,I\0\0"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x49, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -52,9 +52,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, true);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,T\0\0"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x54, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -63,9 +63,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, false);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,F\0\0"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x46, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -74,9 +74,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, 1);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,i\0\0"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x01 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -85,9 +85,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, 1f);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,f\0\0"u8.ToArray().Concat(new byte[] { 0x3F, 0x80, 0x00, 0x00 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x66, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -96,9 +96,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, 1f, 1f, 1f);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,fff\0\0\0\0"u8.ToArray().Concat(new byte[] { 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x66, 0x66, 0x66, 0x00, 0x00, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00, 0x3F, 0x80, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -107,9 +107,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, 1L);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,h\0\0"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x68, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -118,9 +118,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, 1d);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,d\0\0"u8.ToArray().Concat(new byte[] { 0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x64, 0x00, 0x00, 0x3F, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -129,9 +129,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, "some test string");
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,s\0\0some test string\0\0\0\0"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x73, 0x00, 0x00, 0x73, 0x6F, 0x6D, 0x65, 0x20, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6E, 0x67, 0x00, 0x00, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -140,9 +140,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, new byte[] { 0x1, 0x2, 0x3, 0x4 });
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,b\0\0"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -151,9 +151,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, 'a');
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,c\0\0\0\0\0a"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x63, 0x00, 0x00, 0x61, 0x00, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -162,9 +162,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, OSC.RGBA(1, 2, 3, 4));
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,r\0\0"u8.ToArray().Concat(new byte[] { 0x01, 0x02, 0x03, 0x04 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x72, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -173,20 +173,20 @@ public static class Encoder
         var message = new OSCMessage(test_string, OSC.MIDI(1, OSCMIDIStatus.SystemExclusive, 3, 4));
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,m\0\0"u8.ToArray().Concat(new byte[] { 0x01, 0xF0, 0x03, 0x04 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x6D, 0x00, 0x00, 0x01, 0xF0, 0x03, 0x04 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
     public static async Task EncodingTimeTagTest()
     {
-        var message = new OSCMessage(test_string, OSC.TimeTag(1234ul));
+        var message = new OSCMessage(test_string, OSC.TimeTag(DateTime.UnixEpoch));
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,t\0\0"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0xD2 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x74, 0x00, 0x00, 0x83, 0xAA, 0x7E, 0x80, 0x00, 0x00, 0x00, 0x00 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -195,9 +195,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, [new object[] { 1 }]);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,[i]"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x5B, 0x69, 0x5D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -206,9 +206,9 @@ public static class Encoder
         var message = new OSCMessage(test_string, [new object[] { new object[] { new object[] { 1 } } }]);
         var encodedData = OSCEncoder.Encode(message);
 
-        Assert.That(encodedData, Is.EqualTo("/tst\0\0\0\0,[[[i]]]"u8.ToArray().Concat(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 })));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x5B, 0x5B, 0x5B, 0x69, 0x5D, 0x5D, 0x5D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }));
 
-        await sender.Send(message);
+        await sender.SendAsync(message);
     }
 
     [Test]
@@ -216,12 +216,12 @@ public static class Encoder
     {
         var message1 = new OSCMessage("/tst", 1);
         var message2 = new OSCMessage("/ts2", 2);
-        var bundle = new OSCBundle(OSC.EPOCH, message1, message2);
+        var bundle = new OSCBundle(DateTime.UnixEpoch, message1, message2);
         var encodedData = OSCEncoder.Encode(bundle);
 
-        Assert.That(encodedData, Is.EqualTo("#bundle\0\0\0\0\0\0\0\0\0\0\0\0\u0010/tst\0\0\0\0,i\0\0\0\0\0\u0001\0\0\0\u0010/ts2\0\0\0\0,i\0\0\0\0\0\u0002"u8.ToArray()));
+        Assert.That(encodedData, Is.EqualTo(new byte[] { 0x23, 0x62, 0x75, 0x6E, 0x64, 0x6C, 0x65, 0x00, 0x83, 0xAA, 0x7E, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x2F, 0x74, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x10, 0x2F, 0x74, 0x73, 0x32, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02 }));
 
-        await sender.Send(bundle);
+        await sender.SendAsync(bundle);
     }
 
     [Test]

@@ -181,7 +181,7 @@ public static class OSCDecoder
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static char readChar(ReadOnlySpan<byte> data, ref int index) => (char)readIntBE(data, ref index);
+    private static char readChar(ReadOnlySpan<byte> data, ref int index) => (char)readIntLE(data, ref index);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OSCRGBA readRGBA(ReadOnlySpan<byte> data, ref int index) => Unsafe.BitCast<int, OSCRGBA>(readIntLE(data, ref index));

@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="BenchmarkDotNet" Version="0.16.0-preview.1" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.16.0-preview.2" />
         <PackageReference Include="OscCore" Version="1.0.5" />
         <PackageReference Include="Rug.Osc" Version="1.2.5" />
     </ItemGroup>
