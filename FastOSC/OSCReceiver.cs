@@ -7,6 +7,10 @@ using System.Net.Sockets;
 
 namespace FastOSC;
 
+/// <summary>
+/// A receiver that takes bytes and decodes them into <see cref="IOSCPacket"/>s
+/// </summary>
+/// <remarks><see cref="OnPacketReceived"/> is processed synchronously in the order of additions</remarks>
 public class OSCReceiver
 {
     private readonly byte[] buffer;

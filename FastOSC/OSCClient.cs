@@ -5,40 +5,36 @@ using System.Net;
 
 namespace FastOSC;
 
+/// <summary>
+/// A wrapper class around an <see cref="OSCSender"/> and <see cref="OSCReceiver"/>
+/// </summary>
+/// <remarks><see cref="OnPacketReceived"/> is processed synchronously in the order of additions</remarks>
 public class OSCClient
 {
-    public event Func<IOSCPacket, Task>? OnPacketReceived;
-
     private readonly OSCSender sender = new();
     private readonly OSCReceiver receiver = new();
 
     public IPEndPoint SendEndpoint { get; }
     public IPEndPoint ReceiveEndpoint { get; }
 
+    public event Func<IOSCPacket, Task>? OnPacketReceived
+    {
+        add => receiver.OnPacketReceived += value;
+        remove => receiver.OnPacketReceived -= value;
+    }
+
     public OSCClient(IPEndPoint sendEndpoint, IPEndPoint receiveEndpoint)
     {
         SendEndpoint = sendEndpoint;
         ReceiveEndpoint = receiveEndpoint;
-
-        receiver.OnPacketReceived += raisePacketReceivedAsync;
     }
 
-    private async Task raisePacketReceivedAsync(IOSCPacket packet)
-    {
-        var handlers = OnPacketReceived;
-        if (handlers is null) return;
+    public void ConnectSend() => sender.Connect(SendEndpoint);
+    public void ConnectReceive() => receiver.Connect(ReceiveEndpoint);
 
-        foreach (var handler in handlers.GetInvocationList().Cast<Func<IOSCPacket, Task>>())
-        {
-            await handler(packet).ConfigureAwait(false);
-        }
-    }
+    public void DisconnectSend() => sender.Disconnect();
+    public Task DisconnectReceiveAsync() => receiver.DisconnectAsync();
 
-    public Task EnableSendAsync() => sender.ConnectAsync(SendEndpoint);
-    public void EnableReceive() => receiver.Connect(ReceiveEndpoint);
-
-    public void DisableSend() => sender.Disconnect();
-    public Task DisableReceiveAsync() => receiver.DisconnectAsync();
-
-    public Task SendPacketAsync(IOSCPacket packet, CancellationToken token = default) => sender.SendAsync(packet, token);
+    public Task SendPacketAsync(IOSCPacket packet, CancellationToken token = default) => sender.SendPacketAsync(packet, token);
+    public Task SendDataAsync(ReadOnlyMemory<byte> data, CancellationToken token = default) => sender.SendDataAsync(data, token);
 }

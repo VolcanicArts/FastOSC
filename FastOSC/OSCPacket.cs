@@ -1,11 +1,13 @@
 // Copyright (c) VolcanicArts. Licensed under the LGPL License.
 // See the LICENSE file in the repository root for full license text.
 
+using System.Collections;
+
 namespace FastOSC;
 
 public interface IOSCPacket;
 
-public record OSCBundle : IOSCPacket
+public record OSCBundle : IOSCPacket, IEnumerable<IOSCPacket>
 {
     public readonly OSCTimeTag TimeTag;
     public readonly IOSCPacket[] Packets;
@@ -25,9 +27,13 @@ public record OSCBundle : IOSCPacket
         TimeTag = new OSCTimeTag(dateTime);
         Packets = packets;
     }
+
+    public IEnumerator<IOSCPacket> GetEnumerator() => (IEnumerator<IOSCPacket>)Packets.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
-public record OSCMessage : IOSCPacket
+public record OSCMessage : IOSCPacket, IEnumerable<object>
 {
     public readonly string Address;
     public readonly object[] Arguments;
@@ -58,4 +64,8 @@ public record OSCMessage : IOSCPacket
         TypeTagsLength = typeTagsLength;
         ArgumentsLength = argumentsLength;
     }
+
+    public IEnumerator<object> GetEnumerator() => (IEnumerator<object>)Arguments.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

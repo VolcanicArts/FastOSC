@@ -6,11 +6,14 @@ using System.Net.Sockets;
 
 namespace FastOSC;
 
+/// <summary>
+/// A sender that takes <see cref="IOSCPacket"/>s and encodes them into bytes to send
+/// </summary>
 public class OSCSender
 {
     private Socket? socket;
 
-    public async Task ConnectAsync(IPEndPoint endPoint)
+    public void Connect(IPEndPoint endPoint)
     {
         if (socket is not null)
             throw new InvalidOperationException($"Please call {nameof(Disconnect)} first");
@@ -19,9 +22,9 @@ public class OSCSender
 
         try
         {
-            await socket.ConnectAsync(endPoint).ConfigureAwait(false);
+            socket.Connect(endPoint);
         }
-        catch (Exception)
+        catch
         {
             socket.Dispose();
             socket = null;
@@ -32,39 +35,22 @@ public class OSCSender
     public void Disconnect()
     {
         if (socket is null)
-            throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
+            throw new InvalidOperationException($"Please call {nameof(Connect)} first");
 
         socket.Dispose();
         socket = null;
     }
 
-    public async Task SendAsync(IOSCPacket packet, CancellationToken token = default)
+    public Task SendPacketAsync(IOSCPacket packet, CancellationToken token = default)
     {
-        if (socket is null || !socket.Connected)
-            throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
-
-        switch (packet)
-        {
-            case OSCMessage message:
-            {
-                var data = OSCEncoder.Encode(message);
-                await socket.SendAsync(data, token).ConfigureAwait(false);
-                break;
-            }
-
-            case OSCBundle bundle:
-            {
-                var data = OSCEncoder.Encode(bundle);
-                await socket.SendAsync(data, token).ConfigureAwait(false);
-                break;
-            }
-        }
+        var data = OSCEncoder.Encode(packet);
+        return SendDataAsync(data, token);
     }
 
-    public async Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken token = default)
+    public async Task SendDataAsync(ReadOnlyMemory<byte> data, CancellationToken token = default)
     {
         if (socket is null || !socket.Connected)
-            throw new InvalidOperationException($"Please call {nameof(ConnectAsync)} first");
+            throw new InvalidOperationException($"Please call {nameof(Connect)} first");
 
         await socket.SendAsync(data, token).ConfigureAwait(false);
     }

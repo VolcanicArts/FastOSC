@@ -17,6 +17,35 @@ public static class OSCEncoder
     private static readonly UTF8Encoding encoding = new(encoderShouldEmitUTF8Identifier: false);
     private static readonly ulong bundle_header = MemoryMarshal.Read<ulong>("#bundle\0"u8);
 
+    #region Packet
+
+    /// <summary>
+    /// Encodes an <see cref="IOSCPacket"/> into a heap-allocated byte array.
+    /// </summary>
+    /// <param name="packet">The packet to encode</param>
+    /// <returns>A heap-allocated byte array encoded with the contents of <paramref name="packet"/></returns>
+    public static byte[] Encode(IOSCPacket packet) => packet switch
+    {
+        OSCMessage message => Encode(message),
+        OSCBundle bundle => Encode(bundle),
+        _ => throw new ArgumentOutOfRangeException(nameof(packet), packet, "Unknown packet")
+    };
+
+    /// <summary>
+    /// Encodes an <see cref="IOSCPacket"/> into a given destination <see cref="Span{byte}"/>.
+    /// </summary>
+    /// <param name="packet">The packet to encode</param>
+    /// <param name="dest">The destination <see cref="Span{byte}"/></param>
+    /// <returns>The number of bytes written</returns>
+    public static int Encode(IOSCPacket packet, Span<byte> dest) => packet switch
+    {
+        OSCMessage message => Encode(message, dest),
+        OSCBundle bundle => Encode(bundle, dest),
+        _ => throw new ArgumentOutOfRangeException(nameof(packet), packet, "Unknown packet")
+    };
+
+    #endregion
+
     #region Bundle
 
     /// <summary>
@@ -26,7 +55,7 @@ public static class OSCEncoder
     /// <returns>A heap-allocated byte array encoded with the contents of <paramref name="bundle"/></returns>
     public static byte[] Encode(OSCBundle bundle)
     {
-        var data = new byte[GetEncodedLength(bundle)];
+        var data = new byte[getEncodedLength(bundle)];
         Encode(bundle, data);
         return data;
     }
@@ -36,9 +65,6 @@ public static class OSCEncoder
     /// </summary>
     /// <param name="bundle">The bundle to encode</param>
     /// <param name="dest">The destination <see cref="Span{byte}"/></param>
-    /// <remarks>
-    /// You can call <see cref="GetEncodedLength(FastOSC.OSCBundle)"/> to rent the exact size for <paramref name="dest"/>
-    /// </remarks>
     /// <returns>The number of bytes written</returns>
     public static int Encode(OSCBundle bundle, Span<byte> dest)
     {
@@ -53,7 +79,7 @@ public static class OSCEncoder
     /// <param name="bundle">The bundle to calculate the encoded length for</param>
     /// <returns>The encoded length of the <paramref name="bundle"/></returns>
     /// <exception cref="ArgumentOutOfRangeException">Throws if an unknown <see cref="IOSCPacket"/> is inside the provided <paramref name="bundle"/>, or any nested bundles</exception>
-    public static int GetEncodedLength(OSCBundle bundle)
+    private static int getEncodedLength(OSCBundle bundle)
     {
         var length = 16; // header + timetag length
 
@@ -61,8 +87,8 @@ public static class OSCEncoder
         {
             length += packet switch
             {
-                OSCMessage message => GetEncodedLength(message) + 4, // +4 for bundle element length
-                OSCBundle nestedBundle => GetEncodedLength(nestedBundle) + 4, // +4 for bundle element length
+                OSCMessage message => getEncodedLength(message) + 4, // +4 for bundle element length
+                OSCBundle nestedBundle => getEncodedLength(nestedBundle) + 4, // +4 for bundle element length
                 _ => throw new ArgumentOutOfRangeException(nameof(bundle), bundle, $"Unknown {nameof(IOSCPacket)} within bundle")
             };
         }
@@ -110,7 +136,7 @@ public static class OSCEncoder
     /// <returns>A heap-allocated byte array encoded with the contents of <paramref name="message"/></returns>
     public static byte[] Encode(OSCMessage message)
     {
-        var data = new byte[GetEncodedLength(message)];
+        var data = new byte[getEncodedLength(message)];
         Encode(message, data);
         return data;
     }
@@ -134,8 +160,7 @@ public static class OSCEncoder
     /// <param name="message">The message to calculate the encoded length for</param>
     /// <returns>The encoded length of the <paramref name="message"/></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int GetEncodedLength(OSCMessage message)
-        => OSCUtils.Align(encoding.GetByteCount(message.Address) + 1) + message.TypeTagsLength + message.ArgumentsLength;
+    private static int getEncodedLength(OSCMessage message) => OSCUtils.Align(encoding.GetByteCount(message.Address) + 1) + message.TypeTagsLength + message.ArgumentsLength;
 
     private static void encodeMessage(Span<byte> data, ref int index, OSCMessage message)
     {
